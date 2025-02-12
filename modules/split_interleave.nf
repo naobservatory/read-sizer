@@ -16,7 +16,7 @@ process SPLIT_INTERLEAVE {
 
     """
     mkdir -p ${output_dir}
-    /home/teojcryan/projects/read-sizer/bin/split_interleave_fastq \\
+    "${baseDir}/bin/split_interleave_fastq" \\
         ${prefix} \\
         ${reads_per_file} \\
         <(gunzip --to-stdout ${reads1}) \\
