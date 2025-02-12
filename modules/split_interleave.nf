@@ -5,14 +5,14 @@ process SPLIT_INTERLEAVE {
     tuple val(meta), path(reads)
 
     output:
-    tuple val(meta), path("output/*.fastq.zst"), emit: siz_chunks
+    tuple val(meta), path("${params.output_dir}/*.fastq.zst"), emit: siz_chunks
 
     script:
     def prefix = "${meta.id}"
-    def reads_per_file = 1000
+    def reads_per_file = params.reads_per_file
     def reads1 = reads[0]
     def reads2 = reads[1]
-    def output_dir = "output/"
+    def output_dir = params.output_dir
 
     """
     mkdir -p ${output_dir}
