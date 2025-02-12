@@ -1,38 +1,71 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl=2
 
-// Import the SPLIT_INTERLEAVE process from the module file
 include { SPLIT_INTERLEAVE } from './modules/split_interleave.nf'
 
-params.manifest = params.manifest ?: null
+// Define parameters (these can be overridden at runtime)
+params.bucket            = params.bucket            ?: "my-bucket"  // Simple bucket name (not s3://my-bucket)
+params.delivery          = params.delivery          ?: "delivery1"
+params.reads_per_file    = params.reads_per_file    ?: 1000
+params.output_dir        = params.output_dir        ?: "output"
 
 workflow {
 
-    /*
-     * This workflow supports two modes:
-     * 1. If a manifest CSV is provided via --manifest, it is assumed to have columns: id, read1, read2.
-     * 2. If no manifest is provided, a demo channel with two example samples is used.
-     */
+    // Define a local mount point for the S3 bucket (using baseDir)
+    def bucket = params.bucket
+    def delivery = params.delivery
+    def base = baseDir
+    def s3_mount = "${base}/${bucket}"
 
-    def sampleChannel
-
-    if ( params.manifest ) {
-        sampleChannel = Channel.fromPath(params.manifest)
-                        .splitCsv(header:true)
-                        .map { row ->
-                            tuple( [ id: row.id ], [ file(row.read1), file(row.read2) ] )
-                        }
-    }
-    else {
-        log.warn "No manifest provided; using demo samples."
-        sampleChannel = Channel.of(
-            tuple( [ id: "test" ], [ file("test/test_1.fastq.gz"), file("test/test_2.fastq.gz") ].collect { file(it) } )
-        )
+    // Create the mount directory if it doesn't exist
+    def mountDir = new File(s3_mount)
+    if( !mountDir.exists() ) {
+        mountDir.mkdirs()
     }
 
-    def results = sampleChannel | SPLIT_INTERLEAVE
-
-    results.view { meta, outFiles ->
-        "Sample ${meta.id} produced: ${outFiles.join(', ')}"
+    // Mount the S3 bucket using s3-mount if not already mounted
+    def mountCheckCmd = "mountpoint -q ${s3_mount}"
+    def mountStatus = mountCheckCmd.execute().waitFor()
+    if( mountStatus != 0 ) {
+        println "Mounting S3 bucket ${bucket} at ${s3_mount}"
+        def mountCmd = "mount-s3 --read-only ${bucket} ${s3_mount}"
+        def proc = mountCmd.execute()
+        proc.waitFor()
+        if( proc.exitValue() != 0 ) {
+            error "Failed to mount S3 bucket: ${proc.err.text}"
+        }
+    } else {
+        println "S3 bucket ${bucket} already mounted at ${s3_mount}"
     }
+
+    // List all sample names from ${s3_mount}/${delivery}/raw/*_1.fastq.gz
+    def rawDir = new File("${s3_mount}/${delivery}/raw")
+    if( !rawDir.exists() ) {
+         error "Raw directory does not exist: ${rawDir}"
+    }
+    def rawFiles = rawDir.listFiles().findAll { it.name.endsWith("_1.fastq.gz") }
+    def samples = rawFiles.collect { it.name.replaceFirst(/_1.fastq.gz$/, '') }.unique()
+    println "Found samples: ${samples}"
+
+    // Filter samples: if any file matching ${s3_mount}/${delivery}/siz/${sample}*.fastq.zst exists, skip that sample.
+    def sizDir = new File("${s3_mount}/${delivery}/siz")
+    def samplesToProcess = samples.findAll { sample ->
+         if (!sizDir.exists()) return true
+         def matching = sizDir.listFiles(new FilenameFilter() {
+              boolean accept(File dir, String name) {
+                  return name.startsWith(sample) && name.endsWith(".fastq.zst")
+              }
+         })
+         return (matching == null || matching.size() == 0)
+    }
+
+    println "Samples to process: ${samplesToProcess}"
+
+    // Create a channel of tuples (sample, delivery, bucket) for those samples needing processing
+    Channel.from(samplesToProcess)
+           .map { sample -> tuple(sample, delivery, bucket) }
+           .set { sampleChannel }
+
+    // Launch the SPLIT_INTERLEAVE process for each sample that needs processing
+    sampleChannel | SPLIT_INTERLEAVE
 }

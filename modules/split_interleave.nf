@@ -1,27 +1,38 @@
 process SPLIT_INTERLEAVE {
-    tag "$meta.id"
+    tag "${sample}"
 
     input:
-    tuple val(meta), path(reads)
+    tuple val(sample), val(delivery), val(bucket)
 
     output:
-    tuple val(meta), path("${params.output_dir}/*.fastq.zst"), emit: siz_chunks
+    tuple val(sample), file("completion-tracking/${sample}.complete") 
 
     script:
-    def prefix = "${meta.id}"
     def reads_per_file = params.reads_per_file
-    def reads1 = reads[0]
-    def reads2 = reads[1]
-    def output_dir = params.output_dir
+    def siz_dir = "${bucket}/${params.delivery}/siz/"
 
     """
-    mkdir -p ${output_dir}
-    "${baseDir}/bin/split_interleave_fastq" \\
-        ${prefix} \\
+    #!/usr/bin/env bash
+    set -eu
+
+    mkdir -p completion-tracking
+    FINISHED_FILE="completion-tracking/${sample}.complete"
+
+    if [[ -e \$FINISHED_FILE ]]; then
+      exit 0
+    fi
+
+    TMPDIR=\$(mktemp -d)
+
+    ${baseDir}/bin/split_interleave_fastq \\
+        ${sample} \\
         ${reads_per_file} \\
-        <(gunzip --to-stdout ${reads1}) \\
-        <(gunzip --to-stdout ${reads2}) \\
-        . \\
-        ${output_dir}
+        <(gunzip --to-stdout ${bucket}/${delivery}/raw/${sample}_1.fastq.gz) \\
+        <(gunzip --to-stdout ${bucket}/${delivery}/raw/${sample}_2.fastq.gz) \\
+        \$TMPDIR \\
+        ${siz_dir}
+
+    rmdir \$TMPDIR
+    touch \$FINISHED_FILE
     """    
 }
