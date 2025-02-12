@@ -75,7 +75,7 @@ nextflow.eml
 nextflow.iml
 Vagrantfile
 resources/*
-test/*
+# test/*
 tools/*
 tests_other
 other
