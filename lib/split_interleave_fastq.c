@@ -6,6 +6,7 @@
 
 #define MAX_READ_LEN 1024
 
+// credits: @evanfields
 // to-do: modify so it works with streaming input?
 
 void compress_file(char* fname) {
@@ -56,7 +57,7 @@ void copy_to_s3(char* compressed_fname, char* s3_fname) {
   int max_copy_cmd_len = 2048;
   char copy_cmd[max_copy_cmd_len];
   snprintf(copy_cmd, max_copy_cmd_len,
-           "aws s3 cp %s %s", compressed_fname, s3_fname);
+           "cp %s %s", compressed_fname, s3_fname);
   if (system(copy_cmd) != 0) {
     printf("Failed to copy %s to %s\n", compressed_fname, s3_fname);
     exit(1);
@@ -102,7 +103,6 @@ int main(int argc, char** argv) {
         s3_output_dir[strlen(s3_output_dir) - 1] == '/') {
 
         printf("Error: s3_output_dir should be in the form s3://path/to/dir\n");
-        exit(1);
     }
 
     // Open input files
