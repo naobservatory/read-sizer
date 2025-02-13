@@ -9,12 +9,9 @@ params.delivery          = params.delivery
 params.reads_per_file    = params.reads_per_file    ?: 1000
 
 workflow {
-
     // Define a local mount point for the S3 bucket (using baseDir)
-    def bucket = params.bucket
-    def delivery = params.delivery
     def base = baseDir
-    def s3_mount = "${base}/${bucket}"
+    def s3_mount = "${base}/${params.bucket}"
 
     // Create the mount directory if it doesn't exist
     def mountDir = new File(s3_mount)
@@ -26,19 +23,19 @@ workflow {
     def mountCheckCmd = "mountpoint -q ${s3_mount}"
     def mountStatus = mountCheckCmd.execute().waitFor()
     if( mountStatus != 0 ) {
-        println "Mounting S3 bucket ${bucket} at ${s3_mount}"
-        def mountCmd = "mount-s3 ${bucket} ${s3_mount}"
+        println "Mounting S3 bucket ${params.bucket} at ${s3_mount}"
+        def mountCmd = "mount-s3 ${params.bucket} ${s3_mount}"
         def proc = mountCmd.execute()
         proc.waitFor()
         if( proc.exitValue() != 0 ) {
             error "Failed to mount S3 bucket: ${proc.err.text}"
         }
     } else {
-        println "S3 bucket ${bucket} already mounted at ${s3_mount}"
+        println "S3 bucket ${params.bucket} already mounted at ${s3_mount}"
     }
 
     // List all sample names from ${s3_mount}/${delivery}/raw/*_1.fastq.gz
-    def rawDir = new File("${s3_mount}/${delivery}/raw")
+    def rawDir = new File("${s3_mount}/${params.delivery}/raw")
     if( !rawDir.exists() ) {
          error "Raw directory does not exist: ${rawDir}"
     }
@@ -47,7 +44,7 @@ workflow {
     println "Found samples: ${samples}"
 
     // Filter samples: if any file matching ${s3_mount}/${delivery}/siz/${sample}*.fastq.zst exists, skip that sample.
-    def sizDir = new File("${s3_mount}/${delivery}/siz")
+    def sizDir = new File("${s3_mount}/${params.delivery}/siz")
     def samplesToProcess = samples.findAll { sample ->
          if (!sizDir.exists()) return true
          def matching = sizDir.listFiles(new FilenameFilter() {
@@ -62,20 +59,20 @@ workflow {
 
     // Create a channel of tuples (sample, delivery, bucket) for those samples needing processing
     Channel.from(samplesToProcess)
-           .map { sample -> tuple(sample, delivery, bucket) }
+           .map { sample -> tuple(sample, params.delivery, params.bucket) }
            .set { sampleChannel }
 
     // Launch the SPLIT_INTERLEAVE process for each sample that needs processing
     sampleChannel | SPLIT_INTERLEAVE
+}
 
-    workflow.onComplete {
-        println "All processes completed, unmounting S3 bucket..."
-        def unmountCmd = "umount ${s3_mount}"
-        def unmountProc = unmountCmd.execute()
-        unmountProc.waitFor()
-        if( unmountProc.exitValue() != 0 ) {
-            error "Failed to unmount S3 bucket: ${unmountProc.err.text}"
-        }
-        mountDir.deleteDir()
+workflow.onComplete {
+    println "All processes completed, unmounting S3 bucket..."
+    def unmountCmd = "umount ${baseDir}/${params.bucket}"
+    def unmountProc = unmountCmd.execute()
+    unmountProc.waitFor()
+    if( unmountProc.exitValue() != 0 ) {
+        error "Failed to unmount S3 bucket: ${unmountProc.err.text}"
     }
+    mountDir.deleteDir()
 }
