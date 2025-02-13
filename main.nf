@@ -4,10 +4,9 @@ nextflow.enable.dsl=2
 include { SPLIT_INTERLEAVE } from './modules/split_interleave.nf'
 
 // Define parameters (these can be overridden at runtime)
-params.bucket            = params.bucket            ?: "my-bucket"  // Simple bucket name (not s3://my-bucket)
-params.delivery          = params.delivery          ?: "delivery1"
+params.bucket            = params.bucket          
+params.delivery          = params.delivery
 params.reads_per_file    = params.reads_per_file    ?: 1000
-params.output_dir        = params.output_dir        ?: "output"
 
 workflow {
 
