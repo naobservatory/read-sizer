@@ -23,14 +23,14 @@ curl -s https://get.nextflow.io | bash
 
 ## Usage
 ### Mounting the S3 Bucket
-Before running the workflow, ensure that the S3 bucket is mounted. The workflow script will attempt to mount the S3 bucket if it is not already mounted.
+The workflow script will attempt to mount the S3 bucket (after creating a directory of the same name) if it is not already mounted.
 
 ### Running the Workflow
 ```bash
 nextflow run main.nf --bucket <S3_BUCKET_NAME> --delivery <DELIVERY_FOLDER> --reads_per_file <READS_PER_FILE>
 ```
 - `<S3_BUCKET_NAME>`: The name of the S3 bucket where the raw FASTQ files are stored.
-- `<DELIVERY_FOLDER>`: The folder within the S3 bucket where the raw FASTQ files are located.
+- `<DELIVERY_FOLDER>`: The name of the folder within the S3 bucket where the raw FASTQ files are located.
 - `<READS_PER_FILE>`: The number of reads per output file (default is 1000).
 
 ### Example
