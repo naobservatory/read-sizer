@@ -27,7 +27,7 @@ workflow {
     def mountStatus = mountCheckCmd.execute().waitFor()
     if( mountStatus != 0 ) {
         println "Mounting S3 bucket ${bucket} at ${s3_mount}"
-        def mountCmd = "mount-s3 --read-only ${bucket} ${s3_mount}"
+        def mountCmd = "mount-s3 ${bucket} ${s3_mount}"
         def proc = mountCmd.execute()
         proc.waitFor()
         if( proc.exitValue() != 0 ) {
@@ -67,4 +67,15 @@ workflow {
 
     // Launch the SPLIT_INTERLEAVE process for each sample that needs processing
     sampleChannel | SPLIT_INTERLEAVE
+
+    workflow.onComplete {
+        println "All processes completed, unmounting S3 bucket..."
+        def unmountCmd = "umount ${s3_mount}"
+        def unmountProc = unmountCmd.execute()
+        unmountProc.waitFor()
+        if( unmountProc.exitValue() != 0 ) {
+            error "Failed to unmount S3 bucket: ${unmountProc.err.text}"
+        }
+        mountDir.deleteDir()
+    }
 }
