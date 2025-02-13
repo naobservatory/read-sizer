@@ -94,17 +94,6 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
-    if (strlen(s3_output_dir) < 10 ||
-        s3_output_dir[0] != 's' ||
-        s3_output_dir[1] != '3' ||
-        s3_output_dir[2] != ':' ||
-        s3_output_dir[3] != '/' ||
-        s3_output_dir[4] != '/' ||
-        s3_output_dir[strlen(s3_output_dir) - 1] == '/') {
-
-        printf("Error: s3_output_dir should be in the form s3://path/to/dir\n");
-    }
-
     // Open input files
     FILE* f1 = fopen(r1_path, "r");
     FILE* f2 = fopen(r2_path, "r");
