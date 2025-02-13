@@ -24,5 +24,14 @@ curl -s https://get.nextflow.io | bash
 - Make
 
 ## Usage
+```{bash}
+nextflow run main.nf --bucket <S3_BUCKET_NAME> --delivery <DELIVERY_FOLDER> --reads_per_file <READS_PER_FILE>
+```
+- <S3_BUCKET_NAME>: The name of the S3 bucket where the raw FASTQ files are stored.
+- <DELIVERY_FOLDER>: The folder within the S3 bucket where the raw FASTQ files are located.
+- <READS_PER_FILE>: The number of reads per output file (default is 1000).
 
-## Input/Output
+### Example
+```{bash}
+nextflow run main.nf --bucket my-s3-bucket --delivery my-delivery-folder --reads_per_file 10000000
+```
