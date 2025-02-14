@@ -95,4 +95,5 @@ sandbox
 wave-tests
 x/*
 
-output
+output/
+bin/
