@@ -22,8 +22,14 @@ curl -s https://get.nextflow.io | bash
 - Make
 
 ## Usage
-### Mounting the S3 Bucket
-The workflow script will attempt to mount the S3 bucket (after creating a directory of the same name) if it is not already mounted.
+
+### Compiling the binary
+Build the split_interleave_fastq executable
+```bash
+cd lib
+make
+cd ..
+```
 
 ### Running the Workflow
 ```bash
@@ -33,10 +39,9 @@ nextflow run main.nf --bucket <S3_BUCKET_NAME> --delivery <DELIVERY_FOLDER> --re
 - `<DELIVERY_FOLDER>`: The name of the folder within the S3 bucket where the raw FASTQ files are located.
 - `<READS_PER_FILE>`: The number of reads per output file (default is 1000).
 
+Note: The workflow script will attempt to mount the S3 bucket (after creating a directory of the same name) if it is not already mounted. It will also automatically unmount the S3 bucket after processing is complete.
+
 ### Example
 ```bash
 nextflow run main.nf --bucket my-s3-bucket --delivery my-delivery-folder --reads_per_file 10000000
 ```
-
-### Unmounting the S3 Bucket
-The workflow will automatically unmount the S3 bucket after processing is complete.
