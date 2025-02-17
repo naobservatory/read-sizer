@@ -1,27 +1,18 @@
-# Makefile
-
-# Compiler
 CC = gcc
-
-# Compiler flags
 CFLAGS = -Wall -Wextra -O2
-
-# Source files
+TARGET_DIR = ../bin
+TARGET = $(TARGET_DIR)/split_interleave_fastq
 SRC = split_interleave_fastq.c
 
-# Output directory and executable name
-BIN_DIR = ../bin
-OUTPUT = $(BIN_DIR)/split_interleave_fastq
+.PHONY: all clean
 
-# Build target
-all: $(OUTPUT)
+all: $(TARGET)
 
-# Linking
-$(OUTPUT): $(SRC)
+$(TARGET_DIR):
+	mkdir -p $(TARGET_DIR)
+
+$(TARGET): $(SRC) | $(TARGET_DIR)
 	$(CC) $(CFLAGS) -o $@ $<
 
-# Clean target
 clean:
-	rm -f $(OUTPUT)
-
-.PHONY: all clean
+	rm -rf $(TARGET_DIR)
