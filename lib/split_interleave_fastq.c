@@ -22,10 +22,48 @@ void compress_file(char* fname) {
     }
 }
 
+// Helper function to check if filename ends with .gz
+int is_gzip(const char *fname) {
+    const char *ext = strrchr(fname, '.');
+    return ext && strcmp(ext, ".gz") == 0;
+}
+
+// Helper function to open a file, handling gzip files using zcat.
+FILE* open_fastq_file(const char* path, int* is_pipe) {
+    FILE* f;
+    if (is_gzip(path)) {
+        char cmd[1024];
+        snprintf(cmd, sizeof(cmd), "zcat %s", path);
+        f = popen(cmd, "r");
+        if (!f) {
+            printf("Error opening compressed input file %s\n", path);
+            exit(1);
+        }
+        *is_pipe = 1;
+    } else {
+        f = fopen(path, "r");
+        if (!f) {
+            printf("Error opening input file %s\n", path);
+            exit(1);
+        }
+        *is_pipe = 0;
+    }
+    return f;
+}
+
+// Helper function to close a file opened by open_fastq_file.
+void close_fastq_file(FILE* f, int is_pipe) {
+    if (is_pipe) {
+        pclose(f);
+    } else {
+        fclose(f);
+    }
+}
+
 // Helper function to read one FASTQ record
 int read_fastq_record(FILE* f, char** title, char** seq, char** plus, char** quality,
-                     size_t* title_size, size_t* seq_size, size_t* plus_size, size_t* quality_size,
-                     long read_num) {
+                      size_t* title_size, size_t* seq_size, size_t* plus_size, size_t* quality_size,
+                      long read_num) {
     ssize_t title_len = getline(title, title_size, f);
     ssize_t seq_len = getline(seq, seq_size, f);
     ssize_t plus_len = getline(plus, plus_size, f);
@@ -53,21 +91,8 @@ int read_fastq_record(FILE* f, char** title, char** seq, char** plus, char** qua
     return 1;
 }
 
-/* void copy_to_s3(char* compressed_fname, char* s3_fname) {
-  int max_copy_cmd_len = 2048;
-  char copy_cmd[max_copy_cmd_len];
-  snprintf(copy_cmd, max_copy_cmd_len,
-           "cp %s %s", compressed_fname, s3_fname);
-  if (system(copy_cmd) != 0) {
-    printf("Failed to copy %s to %s\n", compressed_fname, s3_fname);
-    exit(1);
-  }
-} */
-
 void finish_file(char* fname) {
-  compress_file(fname);
-  // copy_to_s3(compressed_fname, s3_fname);
-  // unlink(compressed_fname);
+    compress_file(fname);
 }
 
 int main(int argc, char** argv) {
@@ -76,45 +101,31 @@ int main(int argc, char** argv) {
         printf("  Outputs are automatically zstd compressed\n");
         exit(1);
     }
+
     char* prefix = argv[1];
     long max_reads = strtol(argv[2], NULL, 10);
     char* r1_path = argv[3];
     char* r2_path = argv[4];
-    // char* working_dir = argv[5];
-    // char* s3_output_dir = argv[6];
-
-    /* if (chdir(working_dir) != 0) {
-      printf("Error: Unable to change to directory %s\n", argv[5]);
-      exit(1);
-    } */
 
     if (max_reads <= 0) {
         printf("Error: reads_per_file must be a positive number\n");
         exit(1);
     }
 
-    // Open input files
-    FILE* f1 = fopen(r1_path, "r");
-    FILE* f2 = fopen(r2_path, "r");
-    if (!f1 || !f2) {
-        printf("Error opening input files\n");
-        exit(1);
-    }
+    // Open input files, handling gzip if needed.
+    int f1_pipe = 0, f2_pipe = 0;
+    FILE* f1 = open_fastq_file(r1_path, &f1_pipe);
+    FILE* f2 = open_fastq_file(r2_path, &f2_pipe);
 
     int division = 0;
     int produced_files = 0;
-    long reads = 0;  // reads per current file
-    long all_reads = 0;  // total read pairs processed
+    long reads = 0;     // reads per current file
+    long all_reads = 0; // total read pairs processed
     FILE* out = NULL;
 
     int max_fname_len = strlen(prefix) + 36;
     char fname[max_fname_len];
-    // int max_s3_fname_len = max_fname_len + strlen(s3_output_dir);
-    // char s3_fname[max_s3_fname_len];
-
-    // Compressed output file ends in .zst
     char compressed_fname[max_fname_len + 5];  // +5 for .zst and null terminator
-
 
     // Initialize all line buffers and their sizes for both R1 and R2
     char *title1 = NULL, *title2 = NULL;
@@ -130,15 +141,15 @@ int main(int argc, char** argv) {
     while (1) {
         // Read one record from each file
         int r1_success = read_fastq_record(f1, &title1, &seq1, &plus1, &quality1,
-                                         &title1_size, &seq1_size, &plus1_size, &quality1_size,
-                                         all_reads);
+                                           &title1_size, &seq1_size, &plus1_size, &quality1_size,
+                                           all_reads);
         int r2_success = read_fastq_record(f2, &title2, &seq2, &plus2, &quality2,
-                                         &title2_size, &seq2_size, &plus2_size, &quality2_size,
-                                         all_reads);
+                                           &title2_size, &seq2_size, &plus2_size, &quality2_size,
+                                           all_reads);
 
         // Check for end of files or mismatched pairs
         if (!r1_success && !r2_success) {
-            break;  // Normal end of both files
+            break; // Normal end of both files
         }
         if (r1_success != r2_success) {
             printf("Error: Unequal number of reads in R1 and R2 files\n");
@@ -153,7 +164,6 @@ int main(int argc, char** argv) {
                 exit(1);
             }
             sprintf(compressed_fname, "%s.zst", fname);
-            // snprintf(s3_fname, max_s3_fname_len, "%s/%s_div%06d.fastq.zst", s3_output_dir, prefix, division);
         }
 
         // Write interleaved records
@@ -168,7 +178,6 @@ int main(int argc, char** argv) {
             out = NULL;
             reads = 0;
             division++;
-            // finish_file(fname, compressed_fname, s3_fname);
             finish_file(fname);
             produced_files++;
         }
@@ -177,14 +186,13 @@ int main(int argc, char** argv) {
     // Clean up final file
     if (out) {
         fclose(out);
-        // finish_file(fname, compressed_fname, s3_fname);
         finish_file(fname);
         produced_files++;
     }
 
-    // Close input files
-    fclose(f1);
-    fclose(f2);
+    // Close input files using the proper method.
+    close_fastq_file(f1, f1_pipe);
+    close_fastq_file(f2, f2_pipe);
 
     // Free all buffers
     free(title1); free(title2);
@@ -192,7 +200,6 @@ int main(int argc, char** argv) {
     free(plus1); free(plus2);
     free(quality1); free(quality2);
 
-    // printf("Processed %ld read pairs into %d files\n", all_reads, produced_files);
     fprintf(stderr, "Processed %ld read pairs into %d files\n", all_reads, produced_files);
     return 0;
 }
