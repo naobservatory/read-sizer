@@ -64,16 +64,15 @@ int read_fastq_record(FILE* f, char** title, char** seq, char** plus, char** qua
   }
 } */
 
-void finish_file(char* fname, char* compressed_fname, char* s3_fname) {
+void finish_file(char* fname) {
   compress_file(fname);
   // copy_to_s3(compressed_fname, s3_fname);
   // unlink(compressed_fname);
 }
 
 int main(int argc, char** argv) {
-    if (argc != 6) {
-        printf("Usage: %s <prefix> <reads_per_file> <r1_fastq> <r2_fastq> "
-               "<working_dir>\n", argv[0]);
+    if (argc != 5) {
+        printf("Usage: %s <prefix> <reads_per_file> <r1_fastq> <r2_fastq>\n", argv[0]);
         printf("  Outputs are automatically zstd compressed\n");
         exit(1);
     }
@@ -81,13 +80,13 @@ int main(int argc, char** argv) {
     long max_reads = strtol(argv[2], NULL, 10);
     char* r1_path = argv[3];
     char* r2_path = argv[4];
-    char* working_dir = argv[5];
+    // char* working_dir = argv[5];
     // char* s3_output_dir = argv[6];
 
-    if (chdir(working_dir) != 0) {
+    /* if (chdir(working_dir) != 0) {
       printf("Error: Unable to change to directory %s\n", argv[5]);
       exit(1);
-    }
+    } */
 
     if (max_reads <= 0) {
         printf("Error: reads_per_file must be a positive number\n");
@@ -170,7 +169,7 @@ int main(int argc, char** argv) {
             reads = 0;
             division++;
             // finish_file(fname, compressed_fname, s3_fname);
-            finish_file(fname, compressed_fname);
+            finish_file(fname);
             produced_files++;
         }
     }
@@ -179,7 +178,7 @@ int main(int argc, char** argv) {
     if (out) {
         fclose(out);
         // finish_file(fname, compressed_fname, s3_fname);
-        finish_file(fname, compressed_fname);
+        finish_file(fname);
         produced_files++;
     }
 
@@ -193,6 +192,7 @@ int main(int argc, char** argv) {
     free(plus1); free(plus2);
     free(quality1); free(quality2);
 
-    printf("Processed %ld read pairs into %d files\n", all_reads, produced_files);
+    // printf("Processed %ld read pairs into %d files\n", all_reads, produced_files);
+    fprintf(stderr, "Processed %ld read pairs into %d files\n", all_reads, produced_files);
     return 0;
 }
