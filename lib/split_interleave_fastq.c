@@ -53,7 +53,7 @@ int read_fastq_record(FILE* f, char** title, char** seq, char** plus, char** qua
     return 1;
 }
 
-void copy_to_s3(char* compressed_fname, char* s3_fname) {
+/* void copy_to_s3(char* compressed_fname, char* s3_fname) {
   int max_copy_cmd_len = 2048;
   char copy_cmd[max_copy_cmd_len];
   snprintf(copy_cmd, max_copy_cmd_len,
@@ -62,18 +62,18 @@ void copy_to_s3(char* compressed_fname, char* s3_fname) {
     printf("Failed to copy %s to %s\n", compressed_fname, s3_fname);
     exit(1);
   }
-}
+} */
 
 void finish_file(char* fname, char* compressed_fname, char* s3_fname) {
   compress_file(fname);
-  copy_to_s3(compressed_fname, s3_fname);
-  unlink(compressed_fname);
+  // copy_to_s3(compressed_fname, s3_fname);
+  // unlink(compressed_fname);
 }
 
 int main(int argc, char** argv) {
-    if (argc != 7) {
+    if (argc != 6) {
         printf("Usage: %s <prefix> <reads_per_file> <r1_fastq> <r2_fastq> "
-               "<working_dir> <s3_output_dir>\n", argv[0]);
+               "<working_dir>\n", argv[0]);
         printf("  Outputs are automatically zstd compressed\n");
         exit(1);
     }
@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
     char* r1_path = argv[3];
     char* r2_path = argv[4];
     char* working_dir = argv[5];
-    char* s3_output_dir = argv[6];
+    // char* s3_output_dir = argv[6];
 
     if (chdir(working_dir) != 0) {
       printf("Error: Unable to change to directory %s\n", argv[5]);
@@ -110,8 +110,8 @@ int main(int argc, char** argv) {
 
     int max_fname_len = strlen(prefix) + 36;
     char fname[max_fname_len];
-    int max_s3_fname_len = max_fname_len + strlen(s3_output_dir);
-    char s3_fname[max_s3_fname_len];
+    // int max_s3_fname_len = max_fname_len + strlen(s3_output_dir);
+    // char s3_fname[max_s3_fname_len];
 
     // Compressed output file ends in .zst
     char compressed_fname[max_fname_len + 5];  // +5 for .zst and null terminator
@@ -154,8 +154,7 @@ int main(int argc, char** argv) {
                 exit(1);
             }
             sprintf(compressed_fname, "%s.zst", fname);
-            snprintf(s3_fname, max_s3_fname_len, "%s/%s_div%06d.fastq.zst",
-                     s3_output_dir, prefix, division);
+            // snprintf(s3_fname, max_s3_fname_len, "%s/%s_div%06d.fastq.zst", s3_output_dir, prefix, division);
         }
 
         // Write interleaved records
@@ -170,7 +169,8 @@ int main(int argc, char** argv) {
             out = NULL;
             reads = 0;
             division++;
-            finish_file(fname, compressed_fname, s3_fname);
+            // finish_file(fname, compressed_fname, s3_fname);
+            finish_file(fname, compressed_fname);
             produced_files++;
         }
     }
@@ -178,7 +178,8 @@ int main(int argc, char** argv) {
     // Clean up final file
     if (out) {
         fclose(out);
-        finish_file(fname, compressed_fname, s3_fname);
+        // finish_file(fname, compressed_fname, s3_fname);
+        finish_file(fname, compressed_fname);
         produced_files++;
     }
 
