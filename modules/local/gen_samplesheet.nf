@@ -1,0 +1,22 @@
+// Process to generate the sample sheet from S3 listings using 'scripts/generate_samplesheet.py'
+process GENERATE_SAMPLESHEET {
+    container 'community.wave.seqera.io/library/python_pip_awscli:7c57e4f4ddcd4d47'
+    tag "${params.bucket}/${params.delivery}"
+  
+  input:
+    // Receive bucket and delivery as values
+    val bucket
+    val delivery
+    path script
+  
+  output:
+    // Produce a sample_sheet.csv file in the process workDir
+    path "sample_sheet.csv"
+  
+  script:
+    """
+    # Call the Python script (stored under scripts/) to generate the sample sheet.
+    # This script lists raw FASTQ files and (if present) existing SIZ outputs, then writes sample_sheet.csv.
+    python ${script} --bucket ${bucket} --delivery ${delivery} --output sample_sheet.csv
+    """
+}

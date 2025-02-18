@@ -3,43 +3,20 @@ nextflow.enable.dsl=2
 
 // Import the SPLIT_INTERLEAVE process module
 include { SPLIT_INTERLEAVE } from './modules/local/split_interleave.nf'
-
-// Process to generate the sample sheet from S3 listings using your Python script
-process SAMPLE_SHEET {
-    container 'community.wave.seqera.io/library/python_pip_awscli:7c57e4f4ddcd4d47'
-    tag "${params.bucket}/${params.delivery}"
-  
-  input:
-    // Receive bucket and delivery as values
-    val bucket
-    val delivery
-    path script
-  
-  output:
-    // Produce a sample_sheet.csv file in the process workDir
-    path "sample_sheet.csv"
-  
-  script:
-    """
-    # Call the Python script (stored under scripts/) to generate the sample sheet.
-    # This script lists raw FASTQ files and (if present) existing SIZ outputs, then writes sample_sheet.csv.
-    python ${script} --bucket ${bucket} --delivery ${delivery} --output sample_sheet.csv
-    """
-}
+include { GENERATE_SAMPLESHEET } from './modules/local/gen_samplesheet.nf'
 
 workflow {
-
   // Determine the sample sheet channel:
-  // If --sample_sheet is provided, use it.
-  // Otherwise, generate it from bucket and delivery parameters.
   def sampleSheetChannel
+  // If --sample_sheet is provided, use it.
   if( params.sample_sheet ) {
       println "Using provided sample sheet: ${params.sample_sheet}"
       sampleSheetChannel = Channel.fromPath(params.sample_sheet)
+  // Otherwise, generate it from bucket and delivery parameters.
   } else if( params.bucket && params.delivery ) {
       println "No sample sheet provided; generating sample sheet from bucket ${params.bucket} and delivery ${params.delivery}"
       def script = file("scripts/generate_samplesheet.py")
-      sampleSheetChannel = SAMPLE_SHEET(params.bucket, params.delivery, script)
+      sampleSheetChannel = GENERATE_SAMPLESHEET(params.bucket, params.delivery, script)
   } else {
       error "You must provide either --sample_sheet or both --bucket and --delivery"
   }
@@ -51,7 +28,7 @@ workflow {
                     .map { row ->
                         def meta = [
                           prefix         : row.sample,
-                          reads_per_file : params.reads_per_file ?: 1000,
+                          reads_per_file : params.reads_per_file,
                           sample         : row.sample
                         ]
                         // Stage the FASTQ files (can be S3 URIs). Nextflow will handle file staging.
