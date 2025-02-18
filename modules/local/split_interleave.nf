@@ -16,7 +16,7 @@ process SPLIT_INTERLEAVE {
   script:
     """
     # Run the compiled binary.
-    # It is expected to be available in the PATH (or in the container)
+    # It is expected to be available in the work directory
     chmod +x ${splitInterleave}
     ${splitInterleave} ${meta.prefix} ${meta.reads_per_file} ${r1} ${r2}
     """
