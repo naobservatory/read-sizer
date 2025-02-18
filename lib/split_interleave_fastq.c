@@ -9,6 +9,7 @@
 // credits: @evanfields
 // to-do: modify so it works with streaming input?
 
+// Compresses a file using zstd with specified options and removes the original file.
 void compress_file(char* fname) {
     // Compress with original name
     int max_cmd_len = strlen(fname) + 64;
