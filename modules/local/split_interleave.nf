@@ -17,6 +17,6 @@ process SPLIT_INTERLEAVE {
     """
     # Run the compiled binary.
     # It is expected to be available in the work directory
-    ${splitInterleave} ${meta.id} ${meta.read_pairs_per_siz} ${r1} ${r2}
+    ${splitInterleave} ${meta.id} ${params.read_pairs_per_siz} ${r1} ${r2}
     """
 }
