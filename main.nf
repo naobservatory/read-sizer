@@ -21,7 +21,7 @@ workflow {
   }
 
   // Create a channel from the sample sheet CSV.
-  // The CSV is expected to have header columns: id, fastq_1, fastq_2.
+  // The CSV is expected to have header columns: id, fastq_1, fastq_2, bucket, delivery
   ids_ch = sampleSheetChannel
       .splitCsv(header:true)
       .map { row ->
