@@ -22,11 +22,11 @@ workflow {
 
   // Create a channel from the sample sheet CSV.
   // The CSV is expected to have header columns: id, fastq_1, fastq_2.
-  prefixes_ch = sampleSheetChannel
+  ids_ch = sampleSheetChannel
                     .splitCsv(header:true)
                     .map { row ->
                         def meta = [
-                          prefix         : row.id,
+                          id         : row.id,
                           reads_per_file : params.reads_per_file,
                         ]
                         // Stage the FASTQ files (can be S3 URIs). Nextflow will handle file staging.
@@ -34,5 +34,5 @@ workflow {
                       }
   
   def splitInterleave = file("bin/split_interleave_fastq")
-  results = SPLIT_INTERLEAVE(samples_ch, splitInterleave)
+  results = SPLIT_INTERLEAVE(ids_ch, splitInterleave)
 }
