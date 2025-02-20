@@ -27,7 +27,7 @@ workflow {
                     .map { row ->
                         def meta = [
                           id         : row.id,
-                          reads_per_file : params.reads_per_file,
+                          reads_per_file : params.read_pairs_per_siz,
                         ]
                         // Stage the FASTQ files (can be S3 URIs). Nextflow will handle file staging.
                         tuple(meta, file(row.fastq_1), file(row.fastq_2))
