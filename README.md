@@ -111,10 +111,3 @@ Processed files will be saved to:
 ```
 s3://<bucket-name>/<delivery-name>/siz/
 ```
-
-### Cleanup
-
-Remove temporary work files:
-```bash
-aws s3 rm s3://<bucket-name>/work --recursive
-```
