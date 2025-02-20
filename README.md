@@ -77,9 +77,9 @@ s3://<bucket-name>/<delivery-name>/raw/
 You can provide a CSV sample sheet with the following format:
 
 ```csv
-sample,fastq_1,fastq_2
-sample1,s3://<bucket-name>/<delivery-name>/raw/sample1_1.fastq.gz,s3://<bucket-name>/<delivery-name>/raw/sample1_2.fastq.gz
-sample2,s3://<bucket-name>/<delivery-name>/raw/sample2_1.fastq.gz,s3://<bucket-name>/<delivery-name>/raw/sample2_2.fastq.gz
+sample,fastq_1,fastq_2,bucket,delivery
+sample1,s3://<bucket-name>/<delivery-name>/raw/sample1_1.fastq.gz,s3://<bucket-name>/<delivery-name>/raw/sample1_2.fastq.gz,<bucket-name>,<delivery-name>
+sample2,s3://<bucket-name>/<delivery-name>/raw/sample2_1.fastq.gz,s3://<bucket-name>/<delivery-name>/raw/sample2_2.fastq.gz,<bucket-name>,<delivery-name>
 ```
 
 If not provided, the pipeline will automatically generate a sample sheet by:

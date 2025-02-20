@@ -70,12 +70,12 @@ def main():
     # Write the sample sheet for prefixes that haven't been processed.
     with open(args.output, "w", newline="") as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(["id", "fastq_1", "fastq_2"])
+        writer.writerow(["id", "fastq_1", "fastq_2", "delivery", "bucket"])
         for prefix, reads in prefixes.items():
             if prefix in processed_prefixes:
                 continue
             if 'R1' in reads and 'R2' in reads:
-                writer.writerow([prefix, reads['R1'], reads['R2']])
+                writer.writerow([prefix, reads['R1'], reads['R2'], args.delivery, args.bucket])
             else:
                 sys.stderr.write(f"Warning: Incomplete pair for prefix {prefix}\n")
 
