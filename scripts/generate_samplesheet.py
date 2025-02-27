@@ -7,7 +7,7 @@ import sys
 def list_s3_files(s3_path, allow_missing=False):
     """
     List files at an S3 path using the AWS CLI.
-    Returns a list of filenames.
+    Returns a list of filenames, i.e. ["c.txt"] from s3://a/b/c.txt
     If allow_missing is True and the command fails, returns an empty list.
     """
     try:
@@ -16,6 +16,8 @@ def list_s3_files(s3_path, allow_missing=False):
         files = []
         for line in result.stdout.strip().splitlines():
             parts = line.split()
+            # AWS CLI ls output format: <date> <time> <size> <filename>
+            # We split the line and take the last part which is the filename
             if len(parts) >= 4:
                 filename = parts[-1]
                 files.append(filename)
@@ -45,37 +47,37 @@ def main():
     raw_files = list_s3_files(raw_dir, allow_missing=False)
     siz_files = list_s3_files(siz_dir, allow_missing=True)
 
-    # Build dictionary of samples from raw files.
+    # Build dictionary of ids from raw files.
     # We assume raw files end with _1.fastq.gz and _2.fastq.gz for forward and reverse reads.
-    samples = {}
+    ids = {}
     for f in raw_files:
         if f.endswith("_1.fastq.gz"):
-            sample = f[:-len("_1.fastq.gz")]
-            samples.setdefault(sample, {})['R1'] = raw_dir + f
+            id = f[:-len("_1.fastq.gz")]
+            ids.setdefault(id, {})['R1'] = raw_dir + f
         elif f.endswith("_2.fastq.gz"):
-            sample = f[:-len("_2.fastq.gz")]
-            samples.setdefault(sample, {})['R2'] = raw_dir + f
+            id = f[:-len("_2.fastq.gz")]
+            ids.setdefault(id, {})['R2'] = raw_dir + f
 
-    # Determine processed samples by examining SIZ files.
-    # We assume a SIZ file is named like: <sample>_div000000.fastq.zst,
-    # so the sample name is everything before the first occurrence of '_div'
-    processed_samples = set()
+    # Determine processed ids by examining SIZ files.
+    # We assume a SIZ file is named like: <id>_div000000.fastq.zst,
+    # so the id name is everything before the first occurrence of '_div'
+    processed_ids = set()
     for f in siz_files:
         if '_div' in f:
-            sample = f.partition("_div")[0]
-            processed_samples.add(sample)
+            id = f.partition("_div")[0]
+            processed_ids.add(id)
 
-    # Write the sample sheet for samples that haven't been processed.
+    # Write the sample sheet for ids that haven't been processed.
     with open(args.output, "w", newline="") as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(["sample", "fastq_1", "fastq_2"])
-        for sample, reads in samples.items():
-            if sample in processed_samples:
+        writer.writerow(["id", "fastq_1", "fastq_2", "delivery", "bucket"])
+        for id, reads in ids.items():
+            if id in processed_ids:
                 continue
             if 'R1' in reads and 'R2' in reads:
-                writer.writerow([sample, reads['R1'], reads['R2']])
+                writer.writerow([id, reads['R1'], reads['R2'], args.delivery, args.bucket])
             else:
-                sys.stderr.write(f"Warning: Incomplete pair for sample {sample}\n")
+                sys.stderr.write(f"Warning: Incomplete pair for id {id}\n")
 
     print(f"Sample sheet written to {args.output}")
 

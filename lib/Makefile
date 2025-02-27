@@ -26,6 +26,7 @@ $(TARGET_DIR):
 
 $(TARGET): $(SRC) | $(TARGET_DIR)
 	$(CC) $(CFLAGS) -o $@ $<
+	chmod +x $@
 
 clean:
 	rm -rf $(TARGET_DIR)

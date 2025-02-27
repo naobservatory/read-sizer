@@ -1,8 +1,7 @@
 // Process to SIZ read pairs using 'bin/split_interleave_fastq'
 process SPLIT_INTERLEAVE {
-    publishDir "s3://${params.bucket}/${params.delivery}/siz/", mode: 'copy'
     container 'community.wave.seqera.io/library/gzip_zstd:9f7a7e4daeb80cea'
-    tag "${meta.sample}"
+    tag "${meta.id}"
 
   input:
     // Each tuple contains a metadata map and the two FASTQ files (r1 and r2)
@@ -17,7 +16,6 @@ process SPLIT_INTERLEAVE {
     """
     # Run the compiled binary.
     # It is expected to be available in the work directory
-    chmod +x ${splitInterleave}
-    ${splitInterleave} ${meta.prefix} ${meta.reads_per_file} ${r1} ${r2}
+    ${splitInterleave} ${meta.id} ${meta.read_pairs_per_siz} ${r1} ${r2}
     """
 }

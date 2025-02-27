@@ -6,7 +6,6 @@
 
 #define MAX_READ_LEN 1024
 
-// credits: @evanfields
 // to-do: modify so it works with streaming input?
 
 // Compresses a file using zstd with specified options and removes the original file.
@@ -92,10 +91,6 @@ int read_fastq_record(FILE* f, char** title, char** seq, char** plus, char** qua
     return 1;
 }
 
-void finish_file(char* fname) {
-    compress_file(fname);
-}
-
 int main(int argc, char** argv) {
     if (argc != 5) {
         printf("Usage: %s <prefix> <reads_per_file> <r1_fastq> <r2_fastq>\n", argv[0]);
@@ -179,7 +174,7 @@ int main(int argc, char** argv) {
             out = NULL;
             reads = 0;
             division++;
-            finish_file(fname);
+            compress_file(fname);
             produced_files++;
         }
     }
@@ -187,7 +182,7 @@ int main(int argc, char** argv) {
     // Clean up final file
     if (out) {
         fclose(out);
-        finish_file(fname);
+        compress_file(fname);
         produced_files++;
     }
 

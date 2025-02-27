@@ -23,7 +23,7 @@ These optimizations enhance parallelism, reduce the need to stream file pairs, a
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/naobservatory/read-sizer.git
+git clone git@github.com:naobservatory/read-sizer.git
 cd read-sizer
 ```
 
@@ -39,9 +39,9 @@ make
 cd ..
 ```
 
-## AWS Configuration
+## AWS access
 
-Configure AWS access by setting up your credentials in either `~/.aws/config` or `~/.aws/credentials`:
+Configure AWS access by setting up your region and credentials in  `~/.aws/config` and `~/.aws/credentials` respectively.
 
 `~/.aws/config`:
 ```ini
@@ -49,8 +49,6 @@ Configure AWS access by setting up your credentials in either `~/.aws/config` or
 region = us-east-1
 output = table
 tcp_keepalive = true
-aws_access_key_id = <ACCESS_KEY_ID>
-aws_secret_access_key = <SECRET_ACCESS_KEY>
 ```
 
 `~/.aws/credentials`:
@@ -69,9 +67,9 @@ aws_secret_access_key = <SECRET_ACCESS_KEY>
 
 ### Input Data Requirements
 
-Your paired-end read files should be stored in:
+The inputs need to be in `.fastq.gz` format, with forward and reverse reads in separate files, identically ordered. These files must be stored in:
 ```
-s3://<bucket-name>/<delivery-name>/raw
+s3://<bucket-name>/<delivery-name>/raw/
 ```
 
 ### Sample Sheet (Optional)
@@ -79,14 +77,16 @@ s3://<bucket-name>/<delivery-name>/raw
 You can provide a CSV sample sheet with the following format:
 
 ```csv
-sample,fastq_1,fastq_2
-sample1,s3://<bucket-name>/<delivery-name>/raw/sample1_1.fastq.gz,s3://<bucket-name>/<delivery-name>/raw/sample1_2.fastq.gz
-sample2,s3://<bucket-name>/<delivery-name>/raw/sample2_1.fastq.gz,s3://<bucket-name>/<delivery-name>/raw/sample2_2.fastq.gz
+sample,fastq_1,fastq_2,bucket,delivery
+sample1,s3://<bucket-name>/<delivery-name>/raw/sample1_1.fastq.gz,s3://<bucket-name>/<delivery-name>/raw/sample1_2.fastq.gz,<bucket-name>,<delivery-name>
+sample2,s3://<bucket-name>/<delivery-name>/raw/sample2_1.fastq.gz,s3://<bucket-name>/<delivery-name>/raw/sample2_2.fastq.gz,<bucket-name>,<delivery-name>
 ```
 
 If not provided, the pipeline will automatically generate a sample sheet by:
-1. Scanning the input directory `s3://<bucket-name>/<delivery-name>/raw` for FASTQ files
-2. Identifying pairs of files that need processing (files that don't already have a processed version in the output directory `s3://<bucket-name>/<delivery-name>/siz`)
+1. Scanning the input directory `s3://<bucket-name>/<delivery-name>/raw/` for FASTQ files
+2. Identifying pairs of files that need processing (files that don't already have a processed version in the output directory `s3://<bucket-name>/<delivery-name>/siz/`)
+
+Note: The auto-generated sample sheet assumes FASTQ filenames end with _1.fastq.gz for forward reads and _2.fastq.gz for reverse reads. If your files use different suffixes, please provide a custom sample sheet.
 
 ### Running the Pipeline
 
@@ -110,11 +110,4 @@ nextflow run main.nf \
 Processed files will be saved to:
 ```
 s3://<bucket-name>/<delivery-name>/siz/
-```
-
-### Cleanup
-
-Remove temporary work files:
-```bash
-aws s3 rm s3://<bucket-name>/work --recursive
 ```
