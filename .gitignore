@@ -76,6 +76,7 @@ nextflow.iml
 Vagrantfile
 resources/*
 # test/*
+.nf-test
 tools/*
 tests_other
 other
