@@ -32,12 +32,15 @@ cd read-sizer
 curl -s https://get.nextflow.io | bash
 ```
 
-3. Build the `split_interleave_fastq` executable:
-```bash
-cd lib
-make
-cd ..
-```
+## Build Process
+
+The pipeline now automatically compiles the `split_interleave_fastq` binary during workflow execution:
+
+1. The C source code is compiled at the start of each workflow run
+2. Compilation uses a containerized environment with `gcc`, `make`, and `zstd`
+3. No manual build step is required
+
+To modify the compilation process, edit the source code in `lib/split_interleave_fastq.c`
 
 ## AWS access
 
