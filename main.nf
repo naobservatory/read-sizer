@@ -45,6 +45,5 @@ workflow {
           tuple(meta, file(row.fastq_1), file(row.fastq_2))
         }
   
-  def splitInterleave = file("bin/split_interleave_fastq")
   results = SPLIT_INTERLEAVE(ids_ch, splitInterleave)
 }
