@@ -35,7 +35,7 @@ workflow {
   ids_ch = sampleSheetChannel
       .splitCsv(header:true)
       .map { row ->
-          def outputDir = params.outdir ?: "s3://${row.bucket}/${row.delivery}/siz/"
+          def outputDir = params.outdir ?: row.outdir ?: "s3://${row.bucket}/${row.delivery}/siz/"
           
           def meta = [
             id                 : row.id,
