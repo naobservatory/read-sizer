@@ -35,11 +35,14 @@ workflow {
   ids_ch = sampleSheetChannel
       .splitCsv(header:true)
       .map { row ->
+          def outputDir = params.outdir ?: "s3://${row.bucket}/${row.delivery}/siz/"
+          
           def meta = [
             id                 : row.id,
             read_pairs_per_siz : params.read_pairs_per_siz,
             bucket             : row.bucket, 
-            delivery           : row.delivery
+            delivery           : row.delivery,
+            outdir             : outputDir
           ]
           // Stage the FASTQ files (can be S3 URIs). Nextflow will handle file staging.
           tuple(meta, file(row.fastq_1), file(row.fastq_2))
