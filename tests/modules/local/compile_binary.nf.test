@@ -1,0 +1,29 @@
+nextflow_process {
+    name "Test Process COMPILE_BINARY"
+    script "modules/local/compile_binary.nf"
+    process "COMPILE_BINARY"
+
+    test("Should compile binary successfully") {
+        when {
+            process {
+                """
+                input[0] = file("${projectDir}/lib/split_interleave_fastq.c")
+                """
+            }
+        }
+
+        then {
+            assert process.success
+            assert process.trace.tasks().size() == 1
+            
+            with(process.out) {
+                // binary file existence
+                assert binary.size() == 1
+                
+                // binary file executable permissions
+                def binaryFile = path(binary.get(0)).toFile()
+                assert binaryFile.canExecute()
+            }
+        }
+    }
+}
