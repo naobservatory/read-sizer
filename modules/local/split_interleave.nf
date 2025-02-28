@@ -1,6 +1,5 @@
 // Process to SIZ read pairs using 'bin/split_interleave_fastq'
 process SPLIT_INTERLEAVE {
-    container 'community.wave.seqera.io/library/gzip_zstd:9f7a7e4daeb80cea'
     tag "${meta.id}"
 
   input:
