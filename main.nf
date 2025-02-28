@@ -8,7 +8,8 @@ include { COMPILE_BINARY } from './modules/local/compile_binary.nf'
 workflow {
   // Compile the binary first
   COMPILE_BINARY(
-    file("${workflow.projectDir}/lib/split_interleave_fastq.c")
+    file("${workflow.projectDir}/lib/split_interleave_fastq.c"),
+    file("${workflow.projectDir}/lib/Makefile")
   )
 
   // Get compiled binary path

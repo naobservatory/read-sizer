@@ -40,8 +40,6 @@ The pipeline now automatically compiles the `split_interleave_fastq` binary duri
 2. Compilation uses a containerized environment with `gcc`, `make`, and `zstd`
 3. No manual build step is required
 
-To modify the compilation process, edit the source code in `lib/split_interleave_fastq.c`
-
 ## AWS access
 
 Configure AWS access by setting up your region and credentials in  `~/.aws/config` and `~/.aws/credentials` respectively.
