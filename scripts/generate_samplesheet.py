@@ -3,14 +3,11 @@ import argparse
 import subprocess
 import csv
 import sys
+import re
 
 
 def list_s3_files(s3_path, allow_missing=False):
-    """
-    List files at an S3 path using the AWS CLI.
-    Returns a list of filenames, i.e. ["c.txt"] from s3://a/b/c.txt
-    If allow_missing is True and the command fails, returns an empty list.
-    """
+    """List files at an S3 path using the AWS CLI."""
     try:
         result = subprocess.run(
             ["aws", "s3", "ls", s3_path], capture_output=True, text=True, check=True
@@ -18,8 +15,6 @@ def list_s3_files(s3_path, allow_missing=False):
         files = []
         for line in result.stdout.strip().splitlines():
             parts = line.split()
-            # AWS CLI ls output format: <date> <time> <size> <filename>
-            # We split the line and take the last part which is the filename
             if len(parts) >= 4:
                 filename = parts[-1]
                 files.append(filename)
@@ -35,16 +30,23 @@ def list_s3_files(s3_path, allow_missing=False):
             sys.exit(1)
 
 
+def infer_output_dir(fastq_path):
+    """Infer output directory by replacing 'raw' with 'siz' in the path"""
+    # Replace /raw/ with /siz/
+    output_dir = fastq_path.replace("/raw/", "/siz/")
+    # Remove the filename to get just the directory
+    output_dir = re.sub(r"/[^/]+$", "/", output_dir)
+    return output_dir
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate sample_sheet.csv from raw FASTQ files and existing SIZ files on S3"
+        description="Generate sample_sheet.csv from raw FASTQ files and existing SIZ files"
     )
     parser.add_argument("--bucket", required=True, help="S3 bucket name")
     parser.add_argument("--delivery", required=True, help="Delivery folder name")
     parser.add_argument(
-        "--outdir",
-        default=None,
-        help="Custom output directory (default: s3://{bucket}/{delivery}/siz/)",
+        "--outdir", help="Custom output directory (default: infer from raw path)"
     )
     parser.add_argument(
         "--output",
@@ -53,16 +55,15 @@ def main():
     )
     args = parser.parse_args()
 
-    # Construct S3 paths for raw and siz directories
+    # Construct S3 paths
     raw_dir = f"s3://{args.bucket}/{args.delivery}/raw/"
     siz_dir = f"s3://{args.bucket}/{args.delivery}/siz/"
 
-    # List files in raw and siz directories.
+    # List files in raw and siz directories
     raw_files = list_s3_files(raw_dir, allow_missing=False)
     siz_files = list_s3_files(siz_dir, allow_missing=True)
 
-    # Build dictionary of ids from raw files.
-    # We assume raw files end with _1.fastq.gz and _2.fastq.gz for forward and reverse reads.
+    # Build dictionary of ids from raw files
     ids = {}
     for f in raw_files:
         if f.endswith("_1.fastq.gz"):
@@ -72,30 +73,31 @@ def main():
             id = f[: -len("_2.fastq.gz")]
             ids.setdefault(id, {})["R2"] = raw_dir + f
 
-    # Determine processed ids by examining SIZ files.
-    # We assume a SIZ file is named like: <id>_div000000.fastq.zst,
-    # so the id name is everything before the first occurrence of '_div'
+    # Determine processed ids
     processed_ids = set()
     for f in siz_files:
         if "_div" in f:
             id = f.partition("_div")[0]
             processed_ids.add(id)
 
-    # Default output path if not specified
-    default_outdir = f"s3://{args.bucket}/{args.delivery}/siz/"
-    outdir = args.outdir or default_outdir
-
     # Write sample sheet
     with open(args.output, "w", newline="") as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(["id", "fastq_1", "fastq_2", "bucket", "delivery", "outdir"])
+        writer.writerow(["id", "fastq_1", "fastq_2", "outdir"])
+
         for id, reads in ids.items():
             if id in processed_ids:
                 continue
+
             if "R1" in reads and "R2" in reads:
-                writer.writerow(
-                    [id, reads["R1"], reads["R2"], args.bucket, args.delivery, outdir]
-                )
+                # Use provided outdir if available
+                if args.outdir:
+                    outdir = args.outdir
+                # Otherwise infer from fastq_1 path
+                else:
+                    outdir = infer_output_dir(reads["R1"])
+
+                writer.writerow([id, reads["R1"], reads["R2"], outdir])
             else:
                 sys.stderr.write(f"Warning: Incomplete pair for id {id}\n")
 

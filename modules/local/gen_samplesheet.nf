@@ -7,6 +7,7 @@ process GENERATE_SAMPLESHEET {
     // Receive bucket and delivery as values
     val bucket
     val delivery
+    val outdir
     path script
   
   output:
@@ -14,9 +15,10 @@ process GENERATE_SAMPLESHEET {
     path "sample_sheet.csv"
   
   script:
+    def outdir_param = outdir ? "--outdir ${outdir}" : ''
     """
     # Call the Python script (stored under scripts/) to generate the sample sheet.
     # This script lists raw FASTQ files and (if present) existing SIZ outputs, then writes sample_sheet.csv.
-    python ${script} --bucket ${bucket} --delivery ${delivery} --output sample_sheet.csv
+    python ${script} --bucket ${bucket} --delivery ${delivery} ${outdir_param} --output sample_sheet.csv
     """
 }
