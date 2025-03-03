@@ -31,7 +31,7 @@ nextflow_process {
                 """
                 input[0] = "nao-testing"
                 input[1] = "read-sizer"
-                input[2] = "s3://nao-testing-output/custom-output/"
+                input[2] = "s3://nao-testing/read-sizer/custom"
                 input[3] = file("${projectDir}/scripts/generate_samplesheet.py")
                 """
             }
