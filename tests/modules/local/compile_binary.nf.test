@@ -8,6 +8,7 @@ nextflow_process {
             process {
                 """
                 input[0] = file("${projectDir}/lib/split_interleave_fastq.c")
+                input[1] = file("${projectDir}/lib/Makefile")
                 """
             }
         }
@@ -23,7 +24,25 @@ nextflow_process {
                 // binary file executable permissions
                 def binaryFile = path(binary.get(0)).toFile()
                 assert binaryFile.canExecute()
+                
+                // Check binary path is correct
+                assert binary.get(0).toString().endsWith("/bin/split_interleave_fastq")
             }
+        }
+    }
+
+    test("Should fail with non-existent source file") {
+        when {
+            process {
+                """
+                input[0] = file("${projectDir}/lib/nonexistent_file.c")
+                input[1] = file("${projectDir}/lib/Makefile")
+                """
+            }
+        }
+
+        then {
+            assert process.failed
         }
     }
 }
