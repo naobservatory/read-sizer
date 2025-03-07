@@ -16,14 +16,47 @@ nextflow_process {
         }
 
         then {
-            assert process.success
-            assert process.trace.tasks().size() == 1
-            
-            // Check file output is emitted
-            assert process.out.size() == 1
-            assert process.out.get(0) != null
+        assert process.success
+        
+        // Check output exists
+        assert process.out.size() == 1
+        
+        // Get the sample sheet file path string
+        def sampleSheetFile = process.out.get(0).toString()
+        assert sampleSheetFile.contains("sample_sheet.csv")
+        
+        // Remove brackets from the string to get the clean path
+        def cleanPath = sampleSheetFile.replaceAll(/^\[|\]$/, '')
+        
+        // Read the sample sheet content
+        def sampleSheetContent = path(cleanPath).text
+        
+        // Parse the CSV content
+        def lines = sampleSheetContent.readLines()
+        assert lines.size() >= 1  // At least the header
+        assert lines[0] == "id,fastq_1,fastq_2,outdir"
+        
+        // Skip header, check data lines if any exist
+        if (lines.size() > 1) {
+            lines.tail().each { line ->
+                def columns = line.split(',')
+                assert columns.size() >= 4
+                
+                def fastq1 = columns[1]
+                def outdir = columns[3]
+                
+                // Verify directory transformation logic
+                assert outdir.contains("/siz/")
+                assert !outdir.contains("/raw/")
+                assert outdir.endsWith("/")
+                
+                // Test the specific transformation logic
+                def expectedOutdir = fastq1.replace("/raw/", "/siz/").replaceAll("/[^/]+\$", "/")
+                assert outdir == expectedOutdir
+            }
         }
     }
+}
 
     test("Should generate sample sheet with custom output directory") {
         when {
