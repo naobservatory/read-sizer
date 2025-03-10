@@ -16,5 +16,11 @@ process SPLIT_INTERLEAVE {
     # Run the compiled binary.
     # It is expected to be available in the work directory
     ./${splitInterleave} ${meta.id} ${meta.read_pairs_per_siz} ${r1} ${r2}
+
+    # Ensure zstd files were created successfully
+    if [ \$(ls -1 *.fastq.zst 2>/dev/null | wc -l) -gt 0 ]; then
+        # Clean up input files to free disk space immediately
+        rm -f "${r1}" "${r2}"
+    fi
     """
 }
