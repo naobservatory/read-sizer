@@ -102,8 +102,10 @@ nextflow run main.nf \
     --read_pairs_per_siz <no-of-read-pairs-per-siz-file>
 ```
 The `--read_pairs_per_siz` parameter defaults to 1,000,000 read pairs if not specified.
-- Docker
 
+With sample sheet:
+```bash
+nextflow run main.nf \
     --sample_sheet <path-to-sample-sheet> \
     --read_pairs_per_siz <no-of-read-pairs-per-siz-file>
 ```
