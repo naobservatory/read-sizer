@@ -14,9 +14,7 @@ These optimizations enhance parallelism, reduce the need to stream file pairs, a
 ## Prerequisites
 
 - Nextflow
-- C compiler (gcc)
-- Zstandard library
-- Make
+- Docker
 - AWS credentials configured
 
 ## Installation
@@ -32,12 +30,13 @@ cd read-sizer
 curl -s https://get.nextflow.io | bash
 ```
 
-3. Build the `split_interleave_fastq` executable:
-```bash
-cd lib
-make
-cd ..
-```
+## Build Process
+
+The pipeline now automatically compiles the `split_interleave_fastq` binary during workflow execution:
+
+1. The C source code is compiled at the start of each workflow run
+2. Compilation uses a containerized environment with `gcc`, `make`, and `zstd`
+3. No manual build step is required
 
 ## AWS access
 
@@ -77,14 +76,19 @@ s3://<bucket-name>/<delivery-name>/raw/
 You can provide a CSV sample sheet with the following format:
 
 ```csv
-sample,fastq_1,fastq_2,bucket,delivery
-sample1,s3://<bucket-name>/<delivery-name>/raw/sample1_1.fastq.gz,s3://<bucket-name>/<delivery-name>/raw/sample1_2.fastq.gz,<bucket-name>,<delivery-name>
-sample2,s3://<bucket-name>/<delivery-name>/raw/sample2_1.fastq.gz,s3://<bucket-name>/<delivery-name>/raw/sample2_2.fastq.gz,<bucket-name>,<delivery-name>
+id,fastq_1,fastq_2,outdir
+sample1,s3://<bucket-name>/<delivery-name>/raw/sample1_1.fastq.gz,s3://<bucket-name>/<delivery-name>/raw/sample1_2.fastq.gz,s3://<output-bucket>/<output-path>/
+sample2,s3://<bucket-name>/<delivery-name>/raw/sample2_1.fastq.gz,s3://<bucket-name>/<delivery-name>/raw/sample2_2.fastq.gz,s3://<output-bucket>/<output-path>/
 ```
 
-If not provided, the pipeline will automatically generate a sample sheet by:
+The `outdir` column is optional. If omitted, the output directory will be automatically inferred by replacing `/raw/` with `/siz/` in the input path.
+
+To process multiple samples across different deliveries with custom output directories, create a comprehensive sample sheet that includes samples from all deliveries with their custom output paths.
+
+If no sample sheet is provided but `--bucket` and `--delivery` are specified, a sample sheet will be generated using `scripts/generate_samplesheet.py` by:
 1. Scanning the input directory `s3://<bucket-name>/<delivery-name>/raw/` for FASTQ files
 2. Identifying pairs of files that need processing (files that don't already have a processed version in the output directory `s3://<bucket-name>/<delivery-name>/siz/`)
+3. The output directory for the SIZ files is inferred from the input paths if `--outdir` is not specified.
 
 Note: The auto-generated sample sheet assumes FASTQ filenames end with _1.fastq.gz for forward reads and _2.fastq.gz for reverse reads. If your files use different suffixes, please provide a custom sample sheet.
 
@@ -95,19 +99,22 @@ Without sample sheet:
 nextflow run main.nf \
     --bucket <bucket-name> \
     --delivery <delivery-name> \
-    --reads_per_file <number-of-reads-per-file>
+    --read_pairs_per_siz <no-of-read-pairs-per-siz-file>
 ```
+The `--read_pairs_per_siz` parameter defaults to 1,000,000 read pairs if not specified.
 
 With sample sheet:
 ```bash
 nextflow run main.nf \
     --sample_sheet <path-to-sample-sheet> \
-    --reads_per_file <number-of-reads-per-file>
+    --read_pairs_per_siz <no-of-read-pairs-per-siz-file>
 ```
 
-### Output
-
-Processed files will be saved to:
-```
-s3://<bucket-name>/<delivery-name>/siz/
+With a custom output directory:
+```bash
+nextflow run main.nf \
+    --bucket <bucket-name> \
+    --delivery <delivery-name> \
+    --outdir s3://<output-bucket>/<output-path>/ \
+    --read_pairs_per_siz <no-of-read-pairs-per-siz-file>
 ```
