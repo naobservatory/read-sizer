@@ -19,7 +19,7 @@ nextflow_process {
         then {
             assert process.success
             // process.out is expected to be a list containing one tuple
-            assert process.out.size() == 1
+            assert process.out.size() >= 1
             def resultTuple = process.out[0][0]
             // Each tuple should contain exactly two elements: metadata and output file list
             assert resultTuple.size() == 2
@@ -50,6 +50,45 @@ nextflow_process {
         }
         then {
             assert process.failed
+        }
+    }
+
+    test("Should clean up input files after processing") {
+        when {
+            process {
+                """
+                // Create copies of test files to track
+                def r1 = file("${launchDir}/r1_copy.fastq.gz")
+                def r2 = file("${launchDir}/r2_copy.fastq.gz")
+                
+                // Copy test files to the working directory
+                file('${projectDir}/tests/data/test01_1.fastq.gz').copyTo(r1)
+                file('${projectDir}/tests/data/test01_2.fastq.gz').copyTo(r2)
+                
+                // Ensure files exist before processing
+                assert r1.exists()
+                assert r2.exists()
+                
+                input[0] = tuple(
+                    [ id: 'cleanup_test', read_pairs_per_siz: 1000, outdir: 'tests/output/' ],
+                    r1,
+                    r2
+                )
+                input[1] = file('${projectDir}/bin/split_interleave_fastq')
+                """
+            }
+        }
+        then {
+            assert process.success
+
+            // Verify output files were created
+            assert process.out.size() >= 2
+            assert process.out[0][0][1].size() > 0  // fastq.zst files created
+            
+            // Check if cleanup.success file exists
+            def cleanupFile = process.out[1]
+            assert cleanupFile.size() == 1  // Should contain one item
+            assert cleanupFile[0].toString().endsWith("cleanup.success")
         }
     }
 }

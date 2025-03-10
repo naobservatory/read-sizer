@@ -10,6 +10,7 @@ process SPLIT_INTERLEAVE {
   output:
     // The process outputs a tuple with the meta and all files matching "*.fastq.zst"
     tuple val(meta), path("*.fastq.zst")
+    path "cleanup.success", optional: true
     
   script:
     """
@@ -17,10 +18,14 @@ process SPLIT_INTERLEAVE {
     # It is expected to be available in the work directory
     ./${splitInterleave} ${meta.id} ${meta.read_pairs_per_siz} ${r1} ${r2}
 
-    # Ensure zstd files were created successfully
+    # Check if output files were created and then remove input files
     if [ \$(ls -1 *.fastq.zst 2>/dev/null | wc -l) -gt 0 ]; then
-        # Clean up input files to free disk space immediately
         rm -f "${r1}" "${r2}"
+        
+        # Create a success flag file only if files were removed successfully
+        if [ ! -f "${r1}" ] && [ ! -f "${r2}" ]; then
+            touch cleanup.success
+        fi
     fi
     """
 }
