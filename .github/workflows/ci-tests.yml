@@ -1,8 +1,9 @@
-name: CI Tests
+name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
-    branches: [ main ]
 
 jobs:
   test:
@@ -12,36 +13,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Set up JDK 11
-        uses: actions/setup-java@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v2
         with:
-          java-version: '11'
+          java-version: '21'
           distribution: 'adopt'
 
-      - name: Cache Nextflow
-        uses: actions/cache@v3
-        with:
-          path: ~/.nextflow
-          key: ${{ runner.os }}-nextflow-${{ hashFiles('**/nextflow.config') }}
-          restore-keys: |
-              ${{ runner.os }}-nextflow-
-
-      - name: Setup Nextflow latest (stable)
+      - name: Setup Nextflow latest-edge
         uses: nf-core/setup-nextflow@v1
         with:
-          version: "latest"
-
-      - name: Cache nf-test
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.nf-test
-          key: ${{ runner.os }}-nf-test-${{ hashFiles('**/nf-test.config') }}
-          restore-keys: |
-            ${{ runner.os }}-nf-test-
+          version: "latest-edge"
 
       - name: Install nf-test
         run: |
@@ -49,20 +31,4 @@ jobs:
           sudo mv nf-test /usr/local/bin/
 
       - name: Run Tests
-        run: | 
-          mkdir -p test-results
-          nf-test test --changed-since ${{ github.event.pull_request.base.sha }} --junitxml test-results/junit.xml --ci
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: test-results
-          path: test-results/
-          retention-days: 5
-  
-      - name: Publish Test Report
-        uses: mikepenz/action-junit-report@v3
-        if: always()
-        with:
-          report_paths: 'test-results/junit.xml'
+        run: cd nextflow && nf-test test --ci --verbose
