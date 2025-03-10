@@ -31,4 +31,4 @@ jobs:
           sudo mv nf-test /usr/local/bin/
 
       - name: Run Tests
-        run: cd nextflow && nf-test test --ci --verbose
+        run: nf-test test --ci --verbose
