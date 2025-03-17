@@ -3,6 +3,19 @@ nextflow_process {
     script "modules/local/split_interleave.nf"
     process "SPLIT_INTERLEAVE"
 
+    // Add this setup section to compile the binary before each test
+    setup {
+        run("COMPILE_BINARY") {
+            script "modules/local/compile_binary.nf"
+            process {
+                """
+                input[0] = file("${projectDir}/lib/split_interleave_fastq.c")
+                input[1] = file("${projectDir}/lib/Makefile")
+                """
+            }
+        }
+    }
+
     test("Should interleave and compress FASTQ files successfully") {
         when {
             process {
