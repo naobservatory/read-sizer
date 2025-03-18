@@ -1,5 +1,3 @@
-# tests/mock_generate_samplesheet.py
-#!/usr/bin/env python3
 import argparse
 import subprocess
 import csv
