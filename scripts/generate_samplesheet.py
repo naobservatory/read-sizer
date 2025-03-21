@@ -6,11 +6,15 @@ import sys
 import re
 
 
-def list_s3_files(s3_path, allow_missing=False):
+def list_s3_files(s3_path, allow_missing=False, no_sign_request=False):
     """List files at an S3 path using the AWS CLI."""
     try:
+        cmd = ["aws", "s3", "ls", s3_path]
+        if no_sign_request:
+            cmd.append("--no-sign-request")
+            
         result = subprocess.run(
-            ["aws", "s3", "ls", s3_path], capture_output=True, text=True, check=True
+            cmd, capture_output=True, text=True, check=True
         )
         files = []
         for line in result.stdout.strip().splitlines():
@@ -53,6 +57,11 @@ def main():
         default="sample_sheet.csv",
         help="Output CSV file (default: sample_sheet.csv)",
     )
+    parser.add_argument(
+        "--no-sign-request",
+        action="store_true",
+        help="Use --no-sign-request flag with AWS CLI commands (for public repositories)"
+    )
     args = parser.parse_args()
 
     # Construct S3 paths
@@ -60,8 +69,8 @@ def main():
     siz_dir = f"s3://{args.bucket}/{args.delivery}/siz/"
 
     # List files in raw and siz directories
-    raw_files = list_s3_files(raw_dir, allow_missing=False)
-    siz_files = list_s3_files(siz_dir, allow_missing=True)
+    raw_files = list_s3_files(raw_dir, allow_missing=False, no_sign_request=args.no_sign_request)
+    siz_files = list_s3_files(siz_dir, allow_missing=True, no_sign_request=args.no_sign_request)
 
     # Build dictionary of ids from raw files
     ids = {}
