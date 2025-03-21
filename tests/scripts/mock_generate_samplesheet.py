@@ -1,3 +1,11 @@
+"""
+This script acts as a wrapper around the `generate_samplesheet.py` script located in the `scripts` directory.
+
+The main purpose of this wrapper is to inject the `--no-sign-request` argument into the command-line arguments
+before executing the original `generate_samplesheet.py` script. This is useful for testing the script in a 
+public s3 bucket without needing credentials.
+"""
+
 import os
 import subprocess
 import sys
@@ -23,13 +31,6 @@ def find_project_root(start_dir):
 
 # Start from the current directory and search upward
 project_dir = find_project_root(os.getcwd())
-
-if not project_dir:
-    # Try using a fixed path based on the error message
-    project_dir = "/home/ec2-user/tools/read-sizer"
-    if not os.path.exists(os.path.join(project_dir, "scripts/generate_samplesheet.py")):
-        sys.stderr.write(f"Error: Could not find project directory\n")
-        sys.exit(1)
 
 # Path to the original script
 original_script = os.path.join(project_dir, "scripts", "generate_samplesheet.py")
