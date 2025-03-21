@@ -3,6 +3,18 @@ nextflow_process {
     script "modules/local/split_interleave.nf"
     process "SPLIT_INTERLEAVE"
 
+    setup {
+        run("COMPILE_BINARY") {
+            script "modules/local/compile_binary.nf"
+            process {
+                """
+                input[0] = file("${projectDir}/lib/split_interleave_fastq.c")
+                input[1] = file("${projectDir}/lib/Makefile")
+                """
+            }
+        }
+    }
+
     test("Should interleave and compress FASTQ files successfully") {
         when {
             process {
@@ -12,7 +24,7 @@ nextflow_process {
                     file('${projectDir}/tests/data/test01_1.fastq.gz'),
                     file('${projectDir}/tests/data/test01_2.fastq.gz')
                 )
-                input[1] = file('${projectDir}/bin/split_interleave_fastq')
+                input[1] = COMPILE_BINARY.out.binary
                 """
             }
         }
@@ -44,7 +56,7 @@ nextflow_process {
                     file('${projectDir}/tests/data/nonexistent_1.fastq.gz'),
                     file('${projectDir}/tests/data/nonexistent_2.fastq.gz')
                 )
-                input[1] = file('${projectDir}/bin/split_interleave_fastq')
+                input[1] = COMPILE_BINARY.out.binary
                 """
             }
         }
