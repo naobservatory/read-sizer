@@ -10,7 +10,7 @@ nextflow_process {
                 input[0] = "nao-testing"
                 input[1] = "read-sizer"
                 input[2] = ""
-                input[3] = file("${projectDir}/tests/scripts/mock_generate_samplesheet.py")
+                input[3] = file("${projectDir}/scripts/generate_samplesheet.py")
                 """
             }
         }
@@ -65,7 +65,7 @@ nextflow_process {
                 input[0] = "nao-testing"
                 input[1] = "read-sizer"
                 input[2] = "s3://nao-testing/read-sizer/custom"
-                input[3] = file("${projectDir}/tests/scripts/mock_generate_samplesheet.py")
+                input[3] = file("${projectDir}/scripts/generate_samplesheet.py")
                 """
             }
         }
@@ -86,7 +86,7 @@ nextflow_process {
                 input[0] = "nonexistent-bucket-name-123456789"
                 input[1] = "read-sizer"
                 input[2] = ""
-                input[3] = file("${projectDir}/tests/scripts/mock_generate_samplesheet.py")
+                input[3] = file("${projectDir}/scripts/generate_samplesheet.py")
                 """
             }
         }
