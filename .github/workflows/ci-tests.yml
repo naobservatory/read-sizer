@@ -21,6 +21,12 @@ jobs:
           java-version: '21'
           distribution: 'adopt'
 
+      - name: Configure AWS CLI
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.NAO_TESTING_ACCESS_KEY }}
+          aws configure set aws_secret_access_key ${{ secrets.NAO_TESTING_SECRET_ACCESS_KEY }}
+          aws configure set default.region us-east-1
+
       - name: Setup Nextflow latest-edge
         uses: nf-core/setup-nextflow@v1
         with:
