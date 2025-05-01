@@ -1,6 +1,6 @@
 // Process to SIZer a pair of fastq files
 process SIZER {
-    tag "${meta.id}"
+    tag "${id}"
 
   input:
     // We pass inputs as S3 path strings since the pipeline will stream
@@ -12,9 +12,9 @@ process SIZER {
     """
     sizer.sh -s /usr/local/bin/split_interleave_fastqs \
         -u /sequence_tools/compress_upload.sh \
-        <(aws s3 cp !{r1} - | gunzip) \
-        <(aws s3 cp !{r2} - | gunzip) \
-        !{id} \
-        !{outdir}!{id}
+        <(aws s3 cp ${r1} - | gunzip) \
+        <(aws s3 cp ${r2} - | gunzip) \
+        ${id} \
+        ${outdir}${id}
     """
 }

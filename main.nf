@@ -35,5 +35,6 @@ workflow {
       tuple(row.id, row.fastq_1, row.fastq_2, row.outdir)
     }
   
+  // spawn a process for each pair of files to SIZer
   SIZER(ids_ch)
 }

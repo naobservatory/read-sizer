@@ -1,0 +1,2 @@
+id,fastq_1,fastq_2,outdir
+test_sample,s3://nao-testing/read-sizer/raw/test01_1.fastq.gz,s3://nao-testing/read-sizer/raw/test01_2.fastq.gz,/tmp/
