@@ -17,3 +17,5 @@ RUN git clone https://github.com/naobservatory/sequence_tools && \
     cd sequence_tools && \
     make install && \
     chmod +x /sequence_tools/*.sh
+
+ENV PATH="/sequence_tools:${PATH}"
