@@ -3,17 +3,8 @@
 // Import the SPLIT_INTERLEAVE process module
 include { SIZER } from './modules/local/sizer.nf'
 include { GENERATE_SAMPLESHEET } from './modules/local/gen_samplesheet.nf'
-include { COMPILE_BINARY } from './modules/local/compile_binary.nf'
 
 workflow {
-  // Compile the binary first
-  COMPILE_BINARY(
-    file("${workflow.projectDir}/lib/split_interleave_fastq.c"),
-    file("${workflow.projectDir}/lib/Makefile")
-  )
-
-  // Get compiled binary path
-  splitInterleave = COMPILE_BINARY.out.binary
 
   // Determine the sample sheet channel
   def sampleSheetChannel
