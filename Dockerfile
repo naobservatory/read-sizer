@@ -15,4 +15,7 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 # Clone and install sequence_tools
 RUN git clone https://github.com/naobservatory/sequence_tools && \
     cd sequence_tools && \
-    make install
+    make install && \
+    chmod +x /sequence_tools/*.sh
+
+ENV PATH="/sequence_tools:${PATH}"
