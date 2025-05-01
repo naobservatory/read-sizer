@@ -27,6 +27,14 @@ jobs:
           aws configure set aws_secret_access_key ${{ secrets.NAO_TESTING_SECRET_ACCESS_KEY }}
           aws configure set default.region us-east-1
 
+      # Needed only until we migrate to a public container on ECR
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Setup Nextflow latest-edge
         uses: nf-core/setup-nextflow@v1
         with:
