@@ -1,58 +1,47 @@
-# read-sizer
-
-A Nextflow module/workflow for optimizing paired-end sequencing read files by converting them into SIZ chunks.
+# read-SIZer
 
 ## Overview
 
-read-sizer optimizes paired-end sequencing read files for parallel processing by:
-- Splitting files into smaller chunks
-- Interleaving paired reads
-- Compressing using Zstandard (.fastq.zst)
+This repository contains Nextflow workflow for converting paired gziped-FASTQ files to [SIZ](#siz-spec) (**s**plit, **i**nterleaved, **z**std-compressed) format. The workflow is designed for wide parallelism:
+* Each forward-reverse pair of input `.fastq.gz` files is processed in parallel.
+* Within each file pair, zstd compression jobs run in parallel.
+* All data movement to and from S3 is by streaming, and data movement on a given machine is within memory.
 
-These optimizations enhance parallelism, reduce the need to stream file pairs, and achieve significant storage savings.
+Use of AWS Batch is recommended.
 
-## Prerequisites
+Note that the workflow structure is specialized for the NAO use case:
+* Input `.fastq.gz` files are stored in S3.
+* Output `.fastq.zst` files are uploaded to S3.
+* Automatic [sample sheet generation](#automatically-generated-sample-sheet) assumes a NAO-like bucket structure.
+* Default chunk size and compression level parameters match NAO standards.
 
+That said, the repository contains no private NAO information and might be useful to others.
+
+## Prerequisites and installation
+To run the read-SIZer workflow, you'll need:
 - Nextflow
 - Docker
+- AWS command line interface
 - AWS credentials configured
 
-## Installation
+### Installation
 
 1. Clone the repository:
-```bash
-git clone git@github.com:naobservatory/read-sizer.git
-cd read-sizer
-```
+    ```bash
+    git clone git@github.com:naobservatory/read-sizer.git
+    cd read-sizer
+    ```
+2. [Install Nextflow](https://www.nextflow.io/docs/latest/install.html)
+3. Install [Docker](https://docs.docker.com/engine/install/) ([EC2 instructions](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-docker.html))
+4. Install the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
-2. Install Nextflow if needed:
-```bash
-curl -s https://get.nextflow.io | bash
-```
+### AWS access
 
-## Build Process
+Configure AWS credentials in `~/.aws/credentials`:
 
-The pipeline now automatically compiles the `split_interleave_fastq` binary during workflow execution:
-
-1. The C source code is compiled at the start of each workflow run
-2. Compilation uses a containerized environment with `gcc`, `make`, and `zstd`
-3. No manual build step is required
-
-## AWS access
-
-Configure AWS access by setting up your region and credentials in  `~/.aws/config` and `~/.aws/credentials` respectively.
-
-`~/.aws/config`:
 ```ini
 [default]
-region = us-east-1
-output = table
-tcp_keepalive = true
-```
-
-`~/.aws/credentials`:
-```ini
-[default]
+region=us-east-1
 aws_access_key_id = <ACCESS_KEY_ID>
 aws_secret_access_key = <SECRET_ACCESS_KEY>
 ```
@@ -62,59 +51,73 @@ aws_secret_access_key = <SECRET_ACCESS_KEY>
 > eval "$(aws configure export-credentials --format env)"
 > ```
 
+You'll need S3 permissions to read input data and write output data. Automatically generating a sample sheet requires S3 list permissions in the relevant bucket.
+
 ## Usage
 
-### Input Data Requirements
+There are two ways to specify inputs and outputs to the SIZer, described below:
+* Sample sheet CSV (most flexible)
+* `--bucket` and `--delivery` parameters, which are used to automatically generate a sample sheet
 
-The inputs need to be in `.fastq.gz` format, with forward and reverse reads in separate files, identically ordered. These files must be stored in:
-```
-s3://<bucket-name>/<delivery-name>/raw/
-```
+In both cases, input data must be stored in S3 in `.fastq.gz` format, with forward and reverse reads in separate files, identically ordered.
 
-### Sample Sheet (Optional)
+### Sample sheet
 
-You can provide a CSV sample sheet with the following format:
+You can provide a CSV sample sheet with the four columns:
+1. `id`: Sample ID (string)
+2. `fastq_1`: S3 path to forward reads file
+3. `fastq_2`: S3 path to reverse reads file
+4. `outdir`: Output directory
 
+e.g.
 ```csv
 id,fastq_1,fastq_2,outdir
-sample1,s3://<bucket-name>/<delivery-name>/raw/sample1_1.fastq.gz,s3://<bucket-name>/<delivery-name>/raw/sample1_2.fastq.gz,s3://<output-bucket>/<output-path>/
-sample2,s3://<bucket-name>/<delivery-name>/raw/sample2_1.fastq.gz,s3://<bucket-name>/<delivery-name>/raw/sample2_2.fastq.gz,s3://<output-bucket>/<output-path>/
+naboo,s3://bucket/raw/naboo_lane1_1.fastq.gz,s3://bucket/raw/naboo_lane1_2.fastq.gz,s3://output-bucket/
+yavin,s3://bucket/raw/yavin_lane1_1.fastq.gz,s3://bucket/raw/yavin_lane1_2.fastq.gz,s3://output-bucket/
+```
+The Nextflow workflow is just a parallel for loop: for each row of the sample sheet, SIZer the reads in `fastq_1` and `fastq_2` to files `<outdir><id>_chunkNNNNNN.fastq.zst`.
+There's no requirement that all the inputs or outputs are in the same bucket -- just make sure you have the relevant S3 permissions.
+
+Note how the `id` is directly appended to the output directory name. This means output _directories_ should end with a slash. Non-slash terminated `outdirs` like `s3://a/b` will yield output files like `s3://a/b<id>_chunkNNNNNN.fastq.zst`.
+
+
+Once you have a sample sheet you're happy with, run the pipeline:
+```
+nextflow run main.nf --sample_sheet <path-to-sample-sheet>
 ```
 
-The `outdir` column is optional. If omitted, the output directory will be automatically inferred by replacing `/raw/` with `/siz/` in the input path.
+### Automatically generated sample sheet
 
-To process multiple samples across different deliveries with custom output directories, create a comprehensive sample sheet that includes samples from all deliveries with their custom output paths.
-
-If no sample sheet is provided but `--bucket` and `--delivery` are specified, a sample sheet will be generated using `scripts/generate_samplesheet.py` by:
-1. Scanning the input directory `s3://<bucket-name>/<delivery-name>/raw/` for FASTQ files
-2. Identifying pairs of files that need processing (files that don't already have a processed version in the output directory `s3://<bucket-name>/<delivery-name>/siz/`)
+If no sample sheet is provided but `--bucket` and `--delivery` are specified, a sample sheet will be automatically generated using `scripts/generate_samplesheet.py` by:
+1. Scanning the input directory `s3://<bucket>/<delivery>/raw/` for `.fastq.gz` files
+2. Identifying pairs of files that need processing (files that don't already have a processed version in the output directory `s3://<bucket>/<delivery>/siz/`)
 3. The output directory for the SIZ files is inferred from the input paths if `--outdir` is not specified.
 
-Note: The auto-generated sample sheet assumes FASTQ filenames end with _1.fastq.gz for forward reads and _2.fastq.gz for reverse reads. If your files use different suffixes, please provide a custom sample sheet.
+Automatic sample sheet generation assumes:
+* Raw data are in `s3://<bucket>/<delivery>/raw/<id>_{1,2}.fastq.gz`
+* You want to SIZer all raw files in the corresponding delivery
+* You will specify `--outdir`, or you want outputs in `s3://<bucket>/<delivery>/siz/<id>_chunkNNNNNN.fastq.zst`.
 
-### Running the Pipeline
+If some of these conditions don't hold, it may still be helpful to execute `generate_samplesheet.py` outside of the Nextflow workflow to generate a sample sheet you can modify.
 
-Without sample sheet:
+To run the pipeline with automatic sample sheet generation:
 ```bash
-nextflow run main.nf \
-    --bucket <bucket-name> \
-    --delivery <delivery-name> \
-    --read_pairs_per_siz <no-of-read-pairs-per-siz-file>
-```
-The `--read_pairs_per_siz` parameter defaults to 1,000,000 read pairs if not specified.
-
-With sample sheet:
-```bash
-nextflow run main.nf \
-    --sample_sheet <path-to-sample-sheet> \
-    --read_pairs_per_siz <no-of-read-pairs-per-siz-file>
+nextflow run main.nf --bucket my-data-bucket --delivery delivery-to-siz
 ```
 
-With a custom output directory:
-```bash
-nextflow run main.nf \
-    --bucket <bucket-name> \
-    --delivery <delivery-name> \
-    --outdir s3://<output-bucket>/<output-path>/ \
-    --read_pairs_per_siz <no-of-read-pairs-per-siz-file>
-```
+# SIZ spec
+
+SIZ files are a kind of [Zstandard](https://facebook.github.io/zstd/)\-compressed FASTQ file with extra guarantees. All SIZ files yield valid FASTQ files when decompressed. SIZ files have the following properties:
+
+* SIZ files represent paired-end short read data.
+* Paired reads are interleaved: `<fwd1><rev1><fwd2><rev2>...`
+* SIZ files represent datasets, such as larger FASTQ files, entire samples, etc., split into chunks.
+  * SIZ files from the same source are named `<prefix>_chunkUVWXYZ.fastq.zst`, where `UVWXYZ` is a fixed-width (6 decimal digits) 0-indexed counter.
+  * When splitting a dataset into SIZ files, each SIZ file contains exactly 1 million read pairs, except the last (highest index) file may contain fewer in the likely case that the dataset’s total size is not a perfect multiple of 1 million read pairs.
+    * Note that after transforming a SIZ chunk (e.g. adapter trimming or deduplication) you may find yourself with a SIZ file that has fewer or (rarely) more than 1 million read pairs.
+  * For example, paired FASTQ files `cool_data_1.fastq` and `cool_data_2.fastq` with 2.7 million read pairs would be packaged into SIZ files (note using a prefix besides cool\_data is valid):
+    * `cool_data_chunk000000.fastq.zst` (1 million read pairs)
+    * `cool_data_chunk000001.fastq.zst` (1 million read pairs)
+    * `cool_data_chunk000002.fastq.zst` (.7 million read pairs)
+* SIZ files have extension `.fastq.zst`
+* When decompressed, SIZ files yield FASTQ files with exactly 4 lines per FASTQ record (so 8 lines per read pair), i.e. sequences are not broken across lines.
