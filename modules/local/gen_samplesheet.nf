@@ -18,6 +18,6 @@ process GENERATE_SAMPLESHEET {
     """
     # Call the Python script (stored under scripts/) to generate the sample sheet.
     # This script lists raw FASTQ files and (if present) existing SIZ outputs, then writes sample_sheet.csv.
-    python ${script} --bucket ${bucket} --delivery ${delivery} ${outdir_param} --output sample_sheet.csv
+    python3 ${script} --bucket ${bucket} --delivery ${delivery} ${outdir_param} --output sample_sheet.csv
     """
 }
