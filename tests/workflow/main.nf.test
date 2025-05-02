@@ -1,13 +1,9 @@
 nextflow_pipeline {
-    name "Test read-sizer Pipeline"
+    name "Test read-SIZer pipeline"
     script "main.nf"
     
     test("Should require sample_sheet or bucket/delivery parameters") {
-        when {
-            params {
-                // No parameters provided
-            }
-        }
+        when {}
         
         then {
             assert workflow.failed
@@ -16,17 +12,12 @@ nextflow_pipeline {
     }
     
     test("Should accept sample_sheet parameter") {
-        // Create a temporary sample sheet
-        setup {
-            file("${workDir}/test_samples.csv").text = """id,fastq_1,fastq_2,outdir
-sample1,${projectDir}/tests/data/test01_1.fastq.gz,${projectDir}/tests/data/test01_2.fastq.gz,${workDir}/output/
-"""
-        }
-        
         when {
             params {
-                sample_sheet = "${workDir}/test_samples.csv"
-                read_pairs_per_siz = 10
+                // runs a small case end to end
+                sample_sheet = "${projectDir}/tests/data/test_samplesheet.csv"
+                read_pairs_per_siz = 10000
+                zstd_level = 5
             }
         }
         
@@ -46,7 +37,6 @@ sample1,${projectDir}/tests/data/test01_1.fastq.gz,${projectDir}/tests/data/test
         }
         
         then {
-            // Since this would require AWS access, we just verify it doesn't fail at workflow structuring
             assert !workflow.stdout.contains("Unknown parameter")
         }
     }
