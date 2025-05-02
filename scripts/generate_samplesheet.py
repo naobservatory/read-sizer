@@ -85,8 +85,8 @@ def main():
     # Determine processed ids
     processed_ids = set()
     for f in siz_files:
-        if "_div" in f:
-            id = f.partition("_div")[0]
+        if "_chunk" in f:
+            id = f.partition("_chunk")[0]
             processed_ids.add(id)
 
     # Write sample sheet
