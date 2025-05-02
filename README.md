@@ -14,6 +14,7 @@ Note that the workflow structure is specialized for the NAO use case:
 * Output `.fastq.zst` files are uploaded to S3.
 * Automatic [sample sheet generation](#automatically-generated-sample-sheet) assumes a NAO-like bucket structure.
 * Default chunk size and compression level parameters match NAO standards.
+* In non-test profiles, the workflow requires significant computational resources in order to control wall clock SIZering time.
 
 That said, the repository contains no private NAO information and might be useful to others.
 

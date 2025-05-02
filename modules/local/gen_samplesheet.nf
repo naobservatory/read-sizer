@@ -1,6 +1,5 @@
 // Process to generate the sample sheet from S3 listings using 'scripts/generate_samplesheet.py'
 process GENERATE_SAMPLESHEET {
-    container 'community.wave.seqera.io/library/python_pip_awscli:7c57e4f4ddcd4d47'
     tag "${params.bucket}/${params.delivery}"
   
   input:
