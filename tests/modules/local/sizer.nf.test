@@ -12,7 +12,7 @@ nextflow_process {
                     's3://nao-testing/read-sizer/raw/test01_1.fastq.gz',
                     's3://nao-testing/read-sizer/raw/test01_2.fastq.gz',
                     '/tmp/',
-                    [chunk_size: 10000, zstd_level: 5]
+                    [chunk_size: 4000, zstd_level: 5]
                 )
                 """
             }
