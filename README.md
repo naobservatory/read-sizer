@@ -7,14 +7,12 @@ This repository contains a Nextflow workflow for converting paired gziped-FASTQ 
 * Within each file pair, zstd compression jobs run in parallel.
 * All data movement to and from S3 is by streaming, and data movement on a given machine is within memory.
 
-Use of AWS Batch is recommended.
-
 Note that the workflow structure is specialized for the NAO use case:
 * Input `.fastq.gz` files are stored in S3.
 * Output `.fastq.zst` files are uploaded to S3.
 * Automatic [sample sheet generation](#automatically-generated-sample-sheet) assumes a NAO-like bucket structure. (Described [below](#automatically-generated-sample-sheet).)
 * Default chunk size and compression level parameters match NAO standards. (1 million read pairs and `-15`, respectively.)
-* In non-test profiles, the workflow requires significant computational resources in order to control wall clock SIZering time.
+* [Running on](#running-with-batch) AWS Batch is recommended.
 
 That said, the repository contains no private NAO information and others are welcome to use it.
 
@@ -99,6 +97,31 @@ If some of these conditions don't hold, it may still be helpful to execute `gene
 To run the pipeline with automatic sample sheet generation:
 ```bash
 nextflow run main.nf --bucket my-data-bucket --delivery delivery-to-siz
+```
+
+### High performance profile
+
+The default profile requires just modest resources (4 CPUs, 6GB memory) for each `SIZER` process. If you're SIZering more than a few thousand read pairs, you probably want to run with the `high_perf` profile, which increases the requirement to 64 CPUs and 120GB memory.
+
+### Running with Batch
+
+Running the workflow with AWS Batch is recommended:
+* The workflow is trivially parallelizable across input file pairs, and Batch is a convenient way to temporarily spin up lots of parallel resources.
+* If you've configured your Batch environment to use spot instances, running with Batch can also be cost saving.
+
+To run the workflow with Batch:
+1. Update the `process.queue =` line in `nextflow.config` to point at your Batch queue.
+2. When you invoke Nextflow, do so with `-profile batch`.
+3. Specify a working directory in S3.
+
+For example:
+```
+nextflow run main.nf --sample_sheet my_sample_sheet.csv -profile batch -work-dir s3://my-bucket/nf_work/
+```
+
+It is _recommended_ to also use the `high_perf` profile:
+```
+nextflow run main.nf --sample_sheet my_sample_sheet.csv -profile batch,high_perf -work-dir s3://my-bucket/nf_work/
 ```
 
 # SIZ spec
