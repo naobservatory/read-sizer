@@ -1,6 +1,5 @@
 #!/usr/bin/env nextflow
 
-// Import the SPLIT_INTERLEAVE process module
 include { SIZER } from './modules/local/sizer.nf'
 include { GENERATE_SAMPLESHEET } from './modules/local/gen_samplesheet.nf'
 
