@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains Nextflow workflow for converting paired gziped-FASTQ files to [SIZ](#siz-spec) (**s**plit, **i**nterleaved, **z**std-compressed) format. The workflow is designed for wide parallelism:
+This repository contains a Nextflow workflow for converting paired gziped-FASTQ files to [SIZ](#siz-spec) (**s**plit, **i**nterleaved, **z**std-compressed) format. The workflow is designed for wide parallelism:
 * Each forward-reverse pair of input `.fastq.gz` files is processed in parallel.
 * Within each file pair, zstd compression jobs run in parallel.
 * All data movement to and from S3 is by streaming, and data movement on a given machine is within memory.
@@ -12,18 +12,13 @@ Use of AWS Batch is recommended.
 Note that the workflow structure is specialized for the NAO use case:
 * Input `.fastq.gz` files are stored in S3.
 * Output `.fastq.zst` files are uploaded to S3.
-* Automatic [sample sheet generation](#automatically-generated-sample-sheet) assumes a NAO-like bucket structure.
-* Default chunk size and compression level parameters match NAO standards.
+* Automatic [sample sheet generation](#automatically-generated-sample-sheet) assumes a NAO-like bucket structure. (Described [below](#automatically-generated-sample-sheet).)
+* Default chunk size and compression level parameters match NAO standards. (1 million read pairs and `-15`, respectively.)
 * In non-test profiles, the workflow requires significant computational resources in order to control wall clock SIZering time.
 
-That said, the repository contains no private NAO information and might be useful to others.
+That said, the repository contains no private NAO information and others are welcome to use it.
 
 ## Prerequisites and installation
-To run the read-SIZer workflow, you'll need:
-- Nextflow
-- Docker
-- AWS command line interface
-- AWS credentials configured
 
 ### Installation
 
@@ -68,7 +63,7 @@ You can provide a CSV sample sheet with the four columns:
 1. `id`: Sample ID (string)
 2. `fastq_1`: S3 path to forward reads file
 3. `fastq_2`: S3 path to reverse reads file
-4. `outdir`: Output directory
+4. `outdir`: S3 output base path
 
 e.g.
 ```csv
@@ -79,7 +74,7 @@ yavin,s3://bucket/raw/yavin_lane1_1.fastq.gz,s3://bucket/raw/yavin_lane1_2.fastq
 The Nextflow workflow is just a parallel for loop: for each row of the sample sheet, SIZer the reads in `fastq_1` and `fastq_2` to files `<outdir><id>_chunkNNNNNN.fastq.zst`.
 There's no requirement that all the inputs or outputs are in the same bucket -- just make sure you have the relevant S3 permissions.
 
-Note how the `id` is directly appended to the output directory name. This means output _directories_ should end with a slash. Non-slash terminated `outdirs` like `s3://a/b` will yield output files like `s3://a/b<id>_chunkNNNNNN.fastq.zst`.
+Note how `id` is directly appended to `outdir`. This means output _directories_ should end with a slash. Non-slash-terminated `outdirs` like `s3://a/b` will yield output files like `s3://a/b<id>_chunkNNNNNN.fastq.zst`.
 
 
 Once you have a sample sheet you're happy with, run the pipeline:
