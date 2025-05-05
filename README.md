@@ -131,7 +131,7 @@ SIZ files are a kind of [Zstandard](https://facebook.github.io/zstd/)\-compresse
 
 ## Why store data in SIZ format?
 * _Splitting_ large datasets into chunks of bounded size is helpful for parallelism, e.g. we can search for reads in a large dataset by having separate processes search within each chunk.
-* _Interleaving_ paired end reads allows both forward and reverse reads to be streamed via stdin and stdout.
+* _Interleaving_ paired-end reads allows both forward and reverse reads to be streamed via stdin and stdout, which can be super handy for efficient streaming workflows.
 * _Zstandard_ compression dominates the more-common gzip on the tradeoff between compression speed and compression ratio. It also decompresses quickly.
 
 ## SIZ spec
