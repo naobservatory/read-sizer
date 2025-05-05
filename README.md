@@ -124,9 +124,19 @@ It is _recommended_ to also use the `high_perf` profile:
 nextflow run main.nf --sample_sheet my_sample_sheet.csv -profile batch,high_perf -work-dir s3://my-bucket/nf_work/
 ```
 
-# SIZ spec
 
-SIZ files are a kind of [Zstandard](https://facebook.github.io/zstd/)\-compressed FASTQ file with extra guarantees. All SIZ files yield valid FASTQ files when decompressed. SIZ files have the following properties:
+# SIZ: **S**plit, **i**nterleaved, **z**std compressed
+
+SIZ files are a kind of [Zstandard](https://facebook.github.io/zstd/)\-compressed FASTQ file with extra guarantees. All SIZ files yield valid FASTQ files when decompressed. 
+
+## Why store data in SIZ format?
+* _Splitting_ large datasets into chunks of bounded size is helpful for parallelism, e.g. we can search for reads in a large dataset by having separate processes search within each chunk.
+* _Interleaving_ paired end reads allows both forward and reverse reads to be streamed via stdin and stdout.
+* _Zstandard_ compression dominates the more-common gzip on the tradeoff between compression speed and compression ratio. It also decompresses quickly.
+
+## SIZ spec
+
+SIZ files have the following properties:
 
 * SIZ files represent paired-end short read data.
 * Paired reads are interleaved: `<fwd1><rev1><fwd2><rev2>...`
