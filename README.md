@@ -54,6 +54,7 @@ There are two ways to specify inputs and outputs to the SIZer, described below:
 * `--bucket` and `--delivery` parameters, which are used to automatically generate a sample sheet
 
 In both cases, input data must be stored in S3 in `.fastq.gz` format, with forward and reverse reads in separate files, identically ordered.
+* **Warning:** The workflow doesn't support input FASTQs with hard line breaks for long sequences; each FASTQ record must be exactly four lines.
 
 ### Sample sheet
 
